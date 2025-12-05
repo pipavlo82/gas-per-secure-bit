@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
@@ -22,8 +21,8 @@ contract MLDSA_RealVector_Test is Test {
         bytes memory pk  = Base64Decode.decode(pkB64);
 
         emit log_bytes32(msgHash);
-        emit log_uint(sig.length);
         emit log_uint(pk.length);
+        emit log_uint(sig.length);
 
         assertEq(keccak256(bytes(scheme)), keccak256(bytes("ML-DSA-65")));
         assertEq(pk.length, 1952, "ML-DSA-65 public key length mismatch");
@@ -42,9 +41,18 @@ contract MLDSA_RealVector_Test is Test {
     }
 
     function _fromHexChar(uint8 c) private pure returns (uint8) {
-        if (c >= "0" && c <= "9") return c - uint8(bytes1("0"));
-        if (c >= "a" && c <= "f") return 10 + c - uint8(bytes1("a"));
-        if (c >= "A" && c <= "F") return 10 + c - uint8(bytes1("A"));
+        // '0' - '9'
+        if (c >= uint8(bytes1("0")) && c <= uint8(bytes1("9"))) {
+            return c - uint8(bytes1("0"));
+        }
+        // 'a' - 'f'
+        if (c >= uint8(bytes1("a")) && c <= uint8(bytes1("f"))) {
+            return 10 + c - uint8(bytes1("a"));
+        }
+        // 'A' - 'F'
+        if (c >= uint8(bytes1("A")) && c <= uint8(bytes1("F"))) {
+            return 10 + c - uint8(bytes1("A"));
+        }
         revert("invalid hex");
     }
 }
@@ -65,13 +73,13 @@ library Base64Decode {
 
         uint256 j = 0;
         for (uint256 i = 0; i < data.length; i += 4) {
-            uint256 n =
-                (_decodeChar(uint8(data[i])) << 18) |
-                (_decodeChar(uint8(data[i+1])) << 12) |
-                (_decodeChar(uint8(data[i+2])) << 6) |
-                (_decodeChar(uint8(data[i+3])));
+            uint32 n =
+                (uint32(_decodeChar(uint8(data[i]))) << 18) |
+                (uint32(_decodeChar(uint8(data[i+1]))) << 12) |
+                (uint32(_decodeChar(uint8(data[i+2]))) << 6) |
+                (uint32(_decodeChar(uint8(data[i+3]))));
 
-            result[j++] = bytes1(uint8((n >> 16) & 0xFF));
+            if (j < outLen) result[j++] = bytes1(uint8((n >> 16) & 0xFF));
             if (j < outLen) result[j++] = bytes1(uint8((n >> 8) & 0xFF));
             if (j < outLen) result[j++] = bytes1(uint8(n & 0xFF));
         }
@@ -80,7 +88,8 @@ library Base64Decode {
     }
 
     function _decodeChar(uint8 c) private pure returns (uint8) {
-        if (c == "=") return 0;
+        if (c == uint8(bytes1("="))) return 0;
+
         for (uint256 i = 0; i < 64; i++) {
             if (TABLE[i] == bytes1(c)) return uint8(i);
         }
