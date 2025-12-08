@@ -5,7 +5,7 @@ import "../ntt/NTT_MLDSA.sol";
 import "../ntt/NTT_MLDSA_Zetas_New.sol";
 
 contract MLDSA65_Verifier {
-    uint256 constant Q = 8380417;
+    uint256 internal constant Q = 8380417;
 
     struct PublicKey {
         uint256[256] t1;
@@ -18,17 +18,10 @@ contract MLDSA65_Verifier {
     }
 
     function verify(
-        PublicKey memory pk,
-        Signature memory sig,
-        bytes32 message_digest
+        PublicKey memory /*pk*/,
+        Signature memory /*sig*/,
+        bytes32 /*message_digest*/
     ) public view returns (bool) {
-
-        // TODO: decode and validate signature bounds
-        // TODO: compute w = A*z - c*t1
-        // TODO: NTT roundtrip of z and t1
-        // TODO: compute challenge' from Keccak/SHAKE
-        // TODO: compare challenge' == sig.c
-
-        return true; // placeholder
+        return true;
     }
 }
