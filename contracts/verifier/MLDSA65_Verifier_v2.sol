@@ -378,8 +378,8 @@ contract MLDSA65_Verifier_v2 {
 
                 uint16 t0 = (           b0         | ((b1 & 0x03) << 8)) & 0x03FF;
                 uint16 t1c = ((b1 >> 2)            | ((b2 & 0x0F) << 6)) & 0x03FF;
-                uint16 t2 = ((b2 >> 4)            | ((b3 & 0x3F) << 4)) & 0x03FF;
-                uint16 t3 = ((b3 >> 6)            |  (b4        << 2))  & 0x03FF;
+                uint16 t2 = ((b2 >> 4)             | ((b3 & 0x3F) << 4)) & 0x03FF;
+                uint16 t3 = ((b3 >> 6)             |  (b4        << 2))  & 0x03FF;
 
                 t1.polys[k][baseIdx + 0] = int32(uint32(t0));
                 t1.polys[k][baseIdx + 1] = int32(uint32(t1c));
@@ -444,20 +444,66 @@ contract MLDSA65_Verifier_v2 {
     }
 
     //
+    // Synthetic ExpandA(rho) — поки що тестове A, НЕ справжній FIPS ExpandA
+    //
+
+    /// @notice Synthetic A[row][col] poly, генерується з rho через keccak256.
+    /// @dev Це тестовий PRF, а не офіційний FIPS-204 ExpandA.
+    function _expandA_poly(
+        bytes32 rho,
+        uint8 row,
+        uint8 col
+    ) internal pure returns (int32[256] memory a) {
+        uint32 q = uint32(uint32(uint256(int256(Q))));
+
+        for (uint256 i = 0; i < 256; ++i) {
+            // Простий PRF: keccak256(rho || row || col || i)
+            bytes32 h = keccak256(
+                abi.encodePacked(rho, row, col, uint16(i))
+            );
+
+            // Беремо 24 біти з h[0..2] і зводимо по модулю q
+            uint32 v24 =
+                uint32(uint8(h[0])) |
+                (uint32(uint8(h[1])) << 8) |
+                (uint32(uint8(h[2])) << 16);
+
+            uint32 reduced = v24 % q;
+            a[i] = int32(int256(uint256(reduced)));
+        }
+    }
+
+    //
     // Structural placeholder for w = A * z - c * t1
     //
 
-    /// @notice Structural placeholder for w = A * z - c * t1 in ML-DSA-65.
-    /// @dev Поки що просто повертаємо t1 як w, щоб pipeline був зібраний.
+    /// @notice Synthetic w = A · z (без -c·t1) для інтеграції з NTT/PolyVec.
+    /// @dev A генерується через _expandA_poly з rho; це тестовий, не-FIPS ExpandA.
     function _compute_w(
         DecodedPublicKey memory dpk,
         DecodedSignature memory dsig
     ) internal pure returns (MLDSA65_PolyVec.PolyVecK memory w) {
-        w = dpk.t1;
+        bytes32 rho = dpk.rho;
 
-        // Щоб прибрати warning про невикористані змінні:
+        // Для кожного рядка A[k,*] рахуємо:
+        // w[k] = Σ_j A[k,j] ∘ z[j]  (pointwise mul + add mod q)
+        for (uint256 k = 0; k < MLDSA65_PolyVec.K; ++k) {
+            int32[256] memory acc; // за замовчуванням 0
+
+            for (uint256 j = 0; j < MLDSA65_PolyVec.L; ++j) {
+                int32[256] memory aPoly = _expandA_poly(rho, uint8(k), uint8(j));
+                int32[256] memory prod = MLDSA65_Poly.pointwiseMul(
+                    aPoly,
+                    dsig.z.polys[j]
+                );
+                acc = MLDSA65_Poly.add(acc, prod);
+            }
+
+            w.polys[k] = acc;
+        }
+
+        // Поки що ми не використовуємо c і h (лише z).
         dsig.c;
-        dsig.z;
         dsig.h;
 
         return w;
