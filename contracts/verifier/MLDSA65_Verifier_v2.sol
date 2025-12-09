@@ -213,32 +213,44 @@ contract MLDSA65_Verifier_v2 {
     }
 
     /// @notice Decode FIPS-204 encoded ML-DSA-65 public key.
-    /// @dev Placeholder that returns a zero-initialized structure unless
-    ///      the encoding length matches the expected FIPS-204 size.
+    /// @dev If the encoding length does not match PK_BYTES, a zero-initialized
+    ///      structure is returned. Otherwise rho is loaded from the last 32 bytes.
     function _decodePublicKey(
         bytes memory raw
     ) internal pure returns (DecodedPublicKey memory pkDec) {
         if (raw.length != PK_BYTES) {
-            // Invalid encoding length: return zero-initialized structure.
             return pkDec;
         }
 
-        // TODO: real decoding of t1 and rho from raw.
+        bytes32 rho;
+        uint256 len = raw.length;
+        assembly {
+            rho := mload(add(add(raw, 32), sub(len, 32)))
+        }
+        pkDec.rho = rho;
+
+        // TODO: implement decoding of t1 from raw.
         return pkDec;
     }
 
     /// @notice Decode FIPS-204 encoded ML-DSA-65 signature.
-    /// @dev Placeholder that returns a zero-initialized structure unless
-    ///      the encoding length matches the expected FIPS-204 size.
+    /// @dev If the encoding length does not match SIG_BYTES, a zero-initialized
+    ///      structure is returned. Otherwise c is loaded from the last 32 bytes.
     function _decodeSignature(
         bytes memory raw
     ) internal pure returns (DecodedSignature memory sigDec) {
         if (raw.length != SIG_BYTES) {
-            // Invalid encoding length: return zero-initialized structure.
             return sigDec;
         }
 
-        // TODO: real decoding of z, h and c from raw.
+        bytes32 c;
+        uint256 len = raw.length;
+        assembly {
+            c := mload(add(add(raw, 32), sub(len, 32)))
+        }
+        sigDec.c = c;
+
+        // TODO: implement decoding of z and h from raw.
         return sigDec;
     }
 
@@ -254,11 +266,7 @@ contract MLDSA65_Verifier_v2 {
         messageDigest;
         sigDec.h;
 
-        // Start from t1 as a structural baseline.
-        // In the real implementation this will be:
-        //   1) transform z and t1 into NTT domain,
-        //   2) compute A * z - c * t1,
-        //   3) transform back with INTT.
+        // Structural placeholder: start from t1.
         w = pkDec.t1;
     }
 
@@ -286,3 +294,4 @@ contract MLDSA65_Verifier_v2 {
         return false;
     }
 }
+
