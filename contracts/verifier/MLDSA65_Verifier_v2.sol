@@ -139,8 +139,50 @@ library MLDSA65_PolyVec {
     }
 }
 
+/// @notice Hint layer for ML-DSA-65 (high-level structure).
+/// @dev Real ML-DSA-65 uses hint bits to reconstruct high bits of w.
+///      Here we only define the data structure and basic validation.
+library MLDSA65_Hint {
+    uint256 internal constant N = 256;
+    uint256 internal constant L = 5; // same L as in MLDSA65_PolyVec
+
+    /// @notice Hint for a PolyVecL: for each coefficient we store a small flag.
+    /// @dev Typical range is {-1, 0, 1}, but here we only enforce a small bounded range.
+    struct HintVecL {
+        int8[256][L] flags;
+    }
+
+    /// @notice Simple range check for hint flags.
+    /// @dev Ensures all flags are in [-1, 1]. This is a sanity check, not the full spec.
+    function isValidHint(
+        HintVecL memory hint
+    ) internal pure returns (bool) {
+        for (uint256 i = 0; i < L; ++i) {
+            for (uint256 j = 0; j < N; ++j) {
+                int8 v = hint.flags[i][j];
+                if (v < -1 || v > 1) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /// @notice Apply hint to w in PolyVecL domain.
+    /// @dev For now this is an identity placeholder. Real logic will adjust w
+    ///      according to hint flags to reconstruct the high bits.
+    function applyHintL(
+        MLDSA65_PolyVec.PolyVecL memory w,
+        HintVecL memory hint
+    ) internal pure returns (MLDSA65_PolyVec.PolyVecL memory r) {
+        // Mark parameters as used to avoid warnings.
+        hint;
+        return w;
+    }
+}
+
 /// @notice ML-DSA-65 Verifier v2 – skeleton for the real verification pipeline.
-/// @dev For now this only fixes ABI and prepares for the polynomial/NTT layer.
+/// @dev For now this only fixes ABI and prepares for the polynomial/NTT/hint layers.
 contract MLDSA65_Verifier_v2 {
     using MLDSA65_Poly for int32[256];
 
