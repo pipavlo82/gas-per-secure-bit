@@ -139,27 +139,21 @@ library MLDSA65_PolyVec {
     }
 }
 
-/// @notice Hint layer for ML-DSA-65 (high-level structure).
-/// @dev Real ML-DSA-65 uses hint bits to reconstruct high bits of w.
-///      Here we only define the data structure and basic validation.
+/// @notice Hint vector helpers for ML-DSA-65.
 library MLDSA65_Hint {
     uint256 internal constant N = 256;
-    uint256 internal constant L = 5; // same L as in MLDSA65_PolyVec
+    uint256 internal constant L = 5; // hint lives in the same L-dimension
 
-    /// @notice Hint for a PolyVecL: for each coefficient we store a small flag.
-    /// @dev Typical range is {-1, 0, 1}, but here we only enforce a small bounded range.
+    /// @notice Hint vector: flags in {-1, 0, 1} per coefficient.
     struct HintVecL {
         int8[256][L] flags;
     }
 
-    /// @notice Simple range check for hint flags.
-    /// @dev Ensures all flags are in [-1, 1]. This is a sanity check, not the full spec.
-    function isValidHint(
-        HintVecL memory hint
-    ) internal pure returns (bool) {
-        for (uint256 i = 0; i < L; ++i) {
-            for (uint256 j = 0; j < N; ++j) {
-                int8 v = hint.flags[i][j];
+    /// @notice Basic sanity check: all flags must be in {-1, 0, 1}.
+    function isValidHint(HintVecL memory h) internal pure returns (bool) {
+        for (uint256 j = 0; j < L; ++j) {
+            for (uint256 i = 0; i < N; ++i) {
+                int8 v = h.flags[j][i];
                 if (v < -1 || v > 1) {
                     return false;
                 }
@@ -168,26 +162,23 @@ library MLDSA65_Hint {
         return true;
     }
 
-    /// @notice Apply hint to w in PolyVecL domain.
-    /// @dev For now this is an identity placeholder. Real logic will adjust w
-    ///      according to hint flags to reconstruct the high bits.
+    /// @notice Placeholder applyHint for PolyVecL.
+    /// @dev For now this acts as an identity mapping; real behavior will be
+    ///      filled in once the full decomposition / hint logic is wired.
     function applyHintL(
         MLDSA65_PolyVec.PolyVecL memory w,
-        HintVecL memory hint
-    ) internal pure returns (MLDSA65_PolyVec.PolyVecL memory r) {
-        // Mark parameters as used to avoid warnings.
-        hint;
+        HintVecL memory /*h*/
+    ) internal pure returns (MLDSA65_PolyVec.PolyVecL memory out) {
         return w;
     }
 }
 
 /// @notice ML-DSA-65 Verifier v2 – skeleton for the real verification pipeline.
-/// @dev For now this only fixes ABI and prepares for the polynomial/NTT/hint layers.
+/// @dev For now this fixes the ABI, decode layer, and prepares for the polynomial/NTT layer.
 contract MLDSA65_Verifier_v2 {
     using MLDSA65_Poly for int32[256];
 
-    uint256 internal constant PK_BYTES = 1952;
-    uint256 internal constant SIG_BYTES = 3309;
+    int32 internal constant Q = 8380417;
 
     struct PublicKey {
         // FIPS-204 encoded ML-DSA-65 public key (1952 bytes)
@@ -199,75 +190,15 @@ contract MLDSA65_Verifier_v2 {
         bytes raw;
     }
 
-    /// @notice Decoded public key components used by the verifier.
     struct DecodedPublicKey {
+        bytes32 rho;
         MLDSA65_PolyVec.PolyVecK t1;
-        bytes32 rho; // seed for matrix A
     }
 
-    /// @notice Decoded signature components used by the verifier.
     struct DecodedSignature {
+        bytes32 c;
         MLDSA65_PolyVec.PolyVecL z;
         MLDSA65_Hint.HintVecL h;
-        bytes32 c; // challenge
-    }
-
-    /// @notice Decode FIPS-204 encoded ML-DSA-65 public key.
-    /// @dev If the encoding length does not match PK_BYTES, a zero-initialized
-    ///      structure is returned. Otherwise rho is loaded from the last 32 bytes.
-    function _decodePublicKey(
-        bytes memory raw
-    ) internal pure returns (DecodedPublicKey memory pkDec) {
-        if (raw.length != PK_BYTES) {
-            return pkDec;
-        }
-
-        bytes32 rho;
-        uint256 len = raw.length;
-        assembly {
-            rho := mload(add(add(raw, 32), sub(len, 32)))
-        }
-        pkDec.rho = rho;
-
-        // TODO: implement decoding of t1 from raw.
-        return pkDec;
-    }
-
-    /// @notice Decode FIPS-204 encoded ML-DSA-65 signature.
-    /// @dev If the encoding length does not match SIG_BYTES, a zero-initialized
-    ///      structure is returned. Otherwise c is loaded from the last 32 bytes.
-    function _decodeSignature(
-        bytes memory raw
-    ) internal pure returns (DecodedSignature memory sigDec) {
-        if (raw.length != SIG_BYTES) {
-            return sigDec;
-        }
-
-        bytes32 c;
-        uint256 len = raw.length;
-        assembly {
-            c := mload(add(add(raw, 32), sub(len, 32)))
-        }
-        sigDec.c = c;
-
-        // TODO: implement decoding of z and h from raw.
-        return sigDec;
-    }
-
-    /// @notice Compute w = A * z - c * t1 in polynomial domain.
-    /// @dev Placeholder wiring for the matrix pipeline. Real implementation
-    ///      will use NTT, polynomial operations and hint layer.
-    function _compute_w(
-        DecodedPublicKey memory pkDec,
-        DecodedSignature memory sigDec,
-        bytes32 messageDigest
-    ) internal pure returns (MLDSA65_PolyVec.PolyVecK memory w) {
-        // Mark unused parameters to avoid warnings for now.
-        messageDigest;
-        sigDec.h;
-
-        // Structural placeholder: start from t1.
-        w = pkDec.t1;
     }
 
     /// @notice Main verification entrypoint (not implemented yet).
@@ -276,22 +207,124 @@ contract MLDSA65_Verifier_v2 {
         Signature memory sig,
         bytes32 message_digest
     ) external pure returns (bool) {
-        DecodedPublicKey memory pkDec = _decodePublicKey(pk.raw);
-        DecodedSignature memory sigDec = _decodeSignature(sig.raw);
+        // length guards: we at least expect to be able to read rho and c
+        if (pk.raw.length < 32 || sig.raw.length < 32) {
+            return false;
+        }
 
-        MLDSA65_PolyVec.PolyVecK memory w =
-            _compute_w(pkDec, sigDec, message_digest);
+        DecodedPublicKey memory dpk = _decodePublicKey(pk.raw);
+        DecodedSignature memory dsig = _decodeSignature(sig.raw);
 
-        // Mark variable as used to avoid warnings.
+        // Keep the pipeline wired structurally: compute w and apply hint later.
+        MLDSA65_PolyVec.PolyVecK memory w = _compute_w(dpk, dsig);
         w;
+        message_digest; // will be used in real hash check
 
-        // TODO:
-        // 1) Implement real decoding for pk and sig.
-        // 2) Implement matrix pipeline A * z - c * t1.
-        // 3) Decompose w, apply hint and recompute challenge hash.
-        // 4) Compare against sigDec.c and return true/false.
-
+        // Full ML-DSA-65 verification is not implemented yet.
         return false;
     }
-}
 
+    /// @notice Decode public key bytes into a structured view.
+    /// @dev Current behavior:
+    ///  - rho is taken from the last 32 bytes of pkRaw
+    ///  - first few coefficients of t1[0] are decoded from the beginning of pkRaw
+    function _decodePublicKey(
+        bytes memory pkRaw
+    ) internal pure returns (DecodedPublicKey memory dpk) {
+        uint256 len = pkRaw.length;
+
+        // 1) rho from the last 32 bytes (if present)
+        if (len >= 32) {
+            uint256 off = len - 32;
+            bytes32 rhoBytes;
+            assembly {
+                rhoBytes := mload(add(add(pkRaw, 0x20), off))
+            }
+            dpk.rho = rhoBytes;
+        }
+
+        // 2) synthetic packing for a few leading coefficients of t1[0]
+        //    This uses a simple 4-bytes-per-coefficient LE layout and is
+        //    intended to be replaced by real FIPS-204 packing later.
+        uint256 maxCoeffs = 4;
+        for (uint256 i = 0; i < maxCoeffs; ++i) {
+            uint256 off = i * 4;
+            if (off + 4 > len) {
+                break;
+            }
+            int32 coeff = _decodeCoeffLE(pkRaw, off);
+            dpk.t1.polys[0][i] = coeff;
+        }
+    }
+
+    /// @notice Decode signature bytes into a structured view.
+    /// @dev Current behavior:
+    ///  - c is taken from the last 32 bytes of sigRaw
+    ///  - first few coefficients of z[0] are decoded from the beginning of sigRaw
+    function _decodeSignature(
+        bytes memory sigRaw
+    ) internal pure returns (DecodedSignature memory dsig) {
+        uint256 len = sigRaw.length;
+
+        // 1) c from the last 32 bytes (if present)
+        if (len >= 32) {
+            uint256 off = len - 32;
+            bytes32 cBytes;
+            assembly {
+                cBytes := mload(add(add(sigRaw, 0x20), off))
+            }
+            dsig.c = cBytes;
+        }
+
+        // 2) synthetic packing for a few leading coefficients of z[0]
+        uint256 maxCoeffs = 4;
+        for (uint256 i = 0; i < maxCoeffs; ++i) {
+            uint256 off = i * 4;
+            if (off + 4 > len) {
+                break;
+            }
+            int32 coeff = _decodeCoeffLE(sigRaw, off);
+            dsig.z.polys[0][i] = coeff;
+        }
+
+        // h remains zeroed for now; real hint packing will be added later.
+    }
+
+    /// @notice Decode a single coefficient from 4 bytes in little-endian order, reduced mod Q.
+    /// @dev This is a low-level helper for early prototyping and will be reused
+    ///      when wiring the real FIPS-204 packing.
+    function _decodeCoeffLE(
+        bytes memory src,
+        uint256 offset
+    ) internal pure returns (int32) {
+        require(offset + 4 <= src.length, "coeff decode out of bounds");
+
+        uint32 v =
+            uint32(uint8(src[offset])) |
+            (uint32(uint8(src[offset + 1])) << 8) |
+            (uint32(uint8(src[offset + 2])) << 16) |
+            (uint32(uint8(src[offset + 3])) << 24);
+
+        uint32 q = uint32(uint32(uint32(uint32(int32(Q)))));
+        uint32 reduced = v % q;
+        return int32(int256(uint256(reduced)));
+    }
+
+    /// @notice Structural placeholder for w = A * z - c * t1 in ML-DSA-65.
+    /// @dev For now this simply forwards t1 as w so that the pipeline is wired
+    ///      and tests can exercise the decoded structures.
+    function _compute_w(
+        DecodedPublicKey memory dpk,
+        DecodedSignature memory dsig
+    ) internal pure returns (MLDSA65_PolyVec.PolyVecK memory w) {
+        // Use t1 as a structural stand-in for w.
+        w = dpk.t1;
+
+        // Touch dsig fields to avoid unused-variable warnings.
+        dsig.c;
+        dsig.z;
+        dsig.h;
+
+        return w;
+    }
+}
