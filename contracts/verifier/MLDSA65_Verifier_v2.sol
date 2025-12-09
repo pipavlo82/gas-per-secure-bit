@@ -250,11 +250,16 @@ contract MLDSA65_Verifier_v2 {
         DecodedSignature memory sigDec,
         bytes32 messageDigest
     ) internal pure returns (MLDSA65_PolyVec.PolyVecK memory w) {
-        // Mark parameters as used to avoid warnings.
-        pkDec;
-        sigDec;
+        // Mark unused parameters to avoid warnings for now.
         messageDigest;
-        // Zero-initialized PolyVecK is returned by default.
+        sigDec.h;
+
+        // Start from t1 as a structural baseline.
+        // In the real implementation this will be:
+        //   1) transform z and t1 into NTT domain,
+        //   2) compute A * z - c * t1,
+        //   3) transform back with INTT.
+        w = pkDec.t1;
     }
 
     /// @notice Main verification entrypoint (not implemented yet).
