@@ -50,6 +50,95 @@ library MLDSA65_Poly {
     }
 }
 
+/// @notice Polynomial vector types and helpers for ML-DSA-65.
+/// @dev Parameters match Dilithium3 / ML-DSA-65: k = 6, l = 5.
+library MLDSA65_PolyVec {
+    uint256 internal constant N = 256;
+    uint256 internal constant K = 6; // length of t1 (polyvecK)
+    uint256 internal constant L = 5; // length of z, h (polyvecL)
+
+    struct PolyVecL {
+        int32[256][L] polys;
+    }
+
+    struct PolyVecK {
+        int32[256][K] polys;
+    }
+
+    /// @notice r = (a + b) mod q, component-wise, for L-length vectors.
+    function addL(
+        PolyVecL memory a,
+        PolyVecL memory b
+    ) internal pure returns (PolyVecL memory r) {
+        for (uint256 i = 0; i < L; ++i) {
+            r.polys[i] = MLDSA65_Poly.add(a.polys[i], b.polys[i]);
+        }
+    }
+
+    /// @notice r = (a - b) mod q, component-wise, for L-length vectors.
+    function subL(
+        PolyVecL memory a,
+        PolyVecL memory b
+    ) internal pure returns (PolyVecL memory r) {
+        for (uint256 i = 0; i < L; ++i) {
+            r.polys[i] = MLDSA65_Poly.sub(a.polys[i], b.polys[i]);
+        }
+    }
+
+    /// @notice r = (a + b) mod q, component-wise, for K-length vectors.
+    function addK(
+        PolyVecK memory a,
+        PolyVecK memory b
+    ) internal pure returns (PolyVecK memory r) {
+        for (uint256 i = 0; i < K; ++i) {
+            r.polys[i] = MLDSA65_Poly.add(a.polys[i], b.polys[i]);
+        }
+    }
+
+    /// @notice r = (a - b) mod q, component-wise, for K-length vectors.
+    function subK(
+        PolyVecK memory a,
+        PolyVecK memory b
+    ) internal pure returns (PolyVecK memory r) {
+        for (uint256 i = 0; i < K; ++i) {
+            r.polys[i] = MLDSA65_Poly.sub(a.polys[i], b.polys[i]);
+        }
+    }
+
+    /// @notice NTT wrapper for PolyVecL.
+    /// @dev TODO: wire to the real NTT core (NTT_MLDSA_Real) later.
+    function nttL(
+        PolyVecL memory v
+    ) internal pure returns (PolyVecL memory r) {
+        // Identity placeholder for now.
+        return v;
+    }
+
+    /// @notice inverse NTT wrapper for PolyVecL.
+    function inttL(
+        PolyVecL memory v
+    ) internal pure returns (PolyVecL memory r) {
+        // Identity placeholder for now.
+        return v;
+    }
+
+    /// @notice NTT wrapper for PolyVecK.
+    function nttK(
+        PolyVecK memory v
+    ) internal pure returns (PolyVecK memory r) {
+        // Identity placeholder for now.
+        return v;
+    }
+
+    /// @notice inverse NTT wrapper for PolyVecK.
+    function inttK(
+        PolyVecK memory v
+    ) internal pure returns (PolyVecK memory r) {
+        // Identity placeholder for now.
+        return v;
+    }
+}
+
 /// @notice ML-DSA-65 Verifier v2 – skeleton for the real verification pipeline.
 /// @dev For now this only fixes ABI and prepares for the polynomial/NTT layer.
 contract MLDSA65_Verifier_v2 {
