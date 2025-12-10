@@ -57,7 +57,7 @@ library MLDSA65_Poly {
 
 //
 // =============================
-//  PolyVecL / PolyVecK wrappers
+// PolyVecL / PolyVecK wrappers
 // =============================
 //
 
@@ -151,7 +151,7 @@ library MLDSA65_PolyVec {
 
 //
 // ============
-//  Hint layer
+// Hint layer
 // ============
 //
 
@@ -190,7 +190,7 @@ library MLDSA65_Hint {
 
 //
 // ===================
-//  Verifier skeleton
+// Verifier skeleton
 // ===================
 //
 
@@ -290,8 +290,8 @@ contract MLDSA65_Verifier_v2 {
 
     /// @notice Decode public key bytes into a structured view.
     /// @dev Два режими:
-    ///  - len >= PK_MIN_LEN (1952): повний FIPS-розпак t1 + rho (новий шлях)
-    ///  - len < PK_MIN_LEN: legacy-режим (тільки rho + перші 4 coeff t1[0] з offset 32)
+    /// - len >= PK_MIN_LEN (1952): повний FIPS-розпак t1 + rho (новий шлях)
+    /// - len < PK_MIN_LEN: legacy-режим (тільки rho + перші 4 coeff t1[0] з offset 32)
     function _decodePublicKeyRaw(
         bytes memory pkRaw
     ) internal pure returns (DecodedPublicKey memory dpk) {
@@ -376,10 +376,10 @@ contract MLDSA65_Verifier_v2 {
 
                 uint256 baseIdx = group * 4;
 
-                uint16 t0 = (           b0         | ((b1 & 0x03) << 8)) & 0x03FF;
-                uint16 t1c = ((b1 >> 2)            | ((b2 & 0x0F) << 6)) & 0x03FF;
-                uint16 t2 = ((b2 >> 4)             | ((b3 & 0x3F) << 4)) & 0x03FF;
-                uint16 t3 = ((b3 >> 6)             |  (b4        << 2))  & 0x03FF;
+                uint16 t0 = (b0 | ((b1 & 0x03) << 8)) & 0x03FF;
+                uint16 t1c = ((b1 >> 2) | ((b2 & 0x0F) << 6)) & 0x03FF;
+                uint16 t2 = ((b2 >> 4) | ((b3 & 0x3F) << 4)) & 0x03FF;
+                uint16 t3 = ((b3 >> 6) | (b4 << 2)) & 0x03FF;
 
                 t1.polys[k][baseIdx + 0] = int32(uint32(t0));
                 t1.polys[k][baseIdx + 1] = int32(uint32(t1c));
@@ -390,34 +390,46 @@ contract MLDSA65_Verifier_v2 {
     }
 
     /// @notice Decode signature bytes into a structured view.
-    /// @dev Поточна поведінка:
-    ///  - c береться з останніх 32 байтів sigRaw
-    ///  - перші кілька коефіцієнтів z[0] – з початку sigRaw (LE, 4 байти на coeff)
+    /// @dev Поведінка:
+    /// - якщо len >= 32: c = останні 32 байти; префікс до них = z (послідовність LE-коефів)
+    /// - якщо len < 32: c залишається 0; весь буфер використовується для z
+    /// У будь-якому випадку функція НЕ revert-ить на коротких сигнатурах.
     function _decodeSignatureRaw(
         bytes memory sigRaw
     ) internal pure returns (DecodedSignature memory dsig) {
         uint256 len = sigRaw.length;
 
-        // c = останні 32 байти
+        // 1) c: тільки якщо є 32 байти в кінці
         if (len >= 32) {
-            uint256 off = len - 32;
+            uint256 cOffset = len - 32;
             bytes32 cBytes;
             assembly {
-                cBytes := mload(add(add(sigRaw, 0x20), off))
+                cBytes := mload(add(add(sigRaw, 0x20), cOffset))
             }
             dsig.c = cBytes;
         }
 
-        // z[0][0..3] = перші 4 coeff з початку sigRaw (LE, 4 байти на coeff)
-        uint256 maxCoeffs = 4;
-        for (uint256 i = 0; i < maxCoeffs; ++i) {
-            uint256 off = i * 4;
-            if (off + 4 > len) {
-                break;
+        // 2) z: префікс до c (якщо len>=32) або весь буфер (якщо len<32)
+        uint256 coeffBytes = len >= 32 ? (len - 32) : len;
+        uint256 coeffCount = coeffBytes / 4; // скільки повних 32-бітних coeff ми маємо
+        uint256 idx = 0;
+
+        if (coeffCount > 0) {
+            for (uint256 j = 0; j < MLDSA65_PolyVec.L && idx < coeffCount; ++j) {
+                for (uint256 i = 0; i < MLDSA65_PolyVec.N && idx < coeffCount; ++i) {
+                    uint256 off = idx * 4;
+                    // off + 4 завжди <= sigRaw.length завдяки тому,
+                    // що idx < coeffCount = floor(coeffBytes/4) і coeffBytes <= len.
+                    int32 coeff = _decodeCoeffLE(sigRaw, off);
+                    dsig.z.polys[j][i] = coeff;
+                    unchecked {
+                        ++idx;
+                    }
+                }
             }
-            int32 coeff = _decodeCoeffLE(sigRaw, off);
-            dsig.z.polys[0][i] = coeff;
         }
+
+        // 3) h залишаємо нульовим (HintVecL за замовчуванням нульовий)
     }
 
     //
@@ -440,6 +452,7 @@ contract MLDSA65_Verifier_v2 {
 
         uint32 q = uint32(uint32(uint256(int256(Q))));
         uint32 reduced = v % q;
+
         return int32(int256(uint256(reduced)));
     }
 
@@ -455,7 +468,6 @@ contract MLDSA65_Verifier_v2 {
         uint8 col
     ) internal pure returns (int32[256] memory a) {
         uint32 q = uint32(uint32(uint256(int256(Q))));
-
         for (uint256 i = 0; i < 256; ++i) {
             // Простий PRF: keccak256(rho || row || col || i)
             bytes32 h = keccak256(
@@ -486,12 +498,16 @@ contract MLDSA65_Verifier_v2 {
         bytes32 rho = dpk.rho;
 
         // Для кожного рядка A[k,*] рахуємо:
-        // w[k] = Σ_j A[k,j] ∘ z[j]  (pointwise mul + add mod q)
+        // w[k] = Σ_j A[k,j] ∘ z[j] (pointwise mul + add mod q)
         for (uint256 k = 0; k < MLDSA65_PolyVec.K; ++k) {
             int32[256] memory acc; // за замовчуванням 0
 
             for (uint256 j = 0; j < MLDSA65_PolyVec.L; ++j) {
-                int32[256] memory aPoly = _expandA_poly(rho, uint8(k), uint8(j));
+                int32[256] memory aPoly = _expandA_poly(
+                    rho,
+                    uint8(k),
+                    uint8(j)
+                );
                 int32[256] memory prod = MLDSA65_Poly.pointwiseMul(
                     aPoly,
                     dsig.z.polys[j]
