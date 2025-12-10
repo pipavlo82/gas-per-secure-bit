@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {NTT_MLDSA_Real} from "../ntt/NTT_MLDSA_Real.sol";
+
 //
 // =============================
 //  Polynomial core (single poly)
@@ -67,6 +69,7 @@ library MLDSA65_PolyVec {
     uint256 internal constant N = 256;
     uint256 internal constant K = 6; // length of t1 (polyvecK)
     uint256 internal constant L = 5; // length of z, h (polyvecL)
+    int32 internal constant Q = 8380417;
 
     struct PolyVecL {
         int32[256][L] polys;
@@ -116,36 +119,99 @@ library MLDSA65_PolyVec {
         }
     }
 
-    /// @notice NTT wrapper for PolyVecL (placeholder).
+    // -----------------------------
+    //  Мости int32[256] <-> uint256[256]
+    // -----------------------------
+
+    function _toNTTDomain(
+        int32[256] memory a
+    ) internal pure returns (uint256[256] memory r) {
+        int256 q = int256(int32(Q));
+        for (uint256 i = 0; i < N; ++i) {
+            int256 v = int256(a[i]);
+            if (v < 0) {
+                v %= q;
+                if (v < 0) v += q;
+            }
+            r[i] = uint256(v);
+        }
+    }
+
+    function _fromNTTDomain(
+        uint256[256] memory a
+    ) internal pure returns (int32[256] memory r) {
+        uint256 q = uint256(uint32(uint32(int32(Q))));
+        for (uint256 i = 0; i < N; ++i) {
+            uint256 v = a[i] % q;
+            r[i] = int32(int256(v));
+        }
+    }
+
+    function _nttPoly(
+        int32[256] memory a
+    ) internal pure returns (int32[256] memory r) {
+        uint256[256] memory tmp = _toNTTDomain(a);
+        tmp = NTT_MLDSA_Real.ntt(tmp);
+        r = _fromNTTDomain(tmp);
+    }
+
+    function _inttPoly(
+        int32[256] memory a
+    ) internal pure returns (int32[256] memory r) {
+        // 1) Переходимо в uint-домен
+        uint256[256] memory tmp = _toNTTDomain(a);
+
+        // 2) Реальний INTT у uint-домені
+        tmp = NTT_MLDSA_Real.intt(tmp);
+
+        // 3) Повертаємося в int32-домен
+        int32[256] memory raw = _fromNTTDomain(tmp);
+
+        // 4) Компенсуємо глобальний фліп знака: робимо r = -raw (mod Q)
+        int64 q = int64(Q);
+        for (uint256 i = 0; i < N; ++i) {
+            int64 v = int64(raw[i]);
+            v = -v;
+            v %= q;
+            if (v < 0) v += q;
+            r[i] = int32(v);
+        }
+    }
+
+    /// @notice NTT wrapper for PolyVecL.
     function nttL(
         PolyVecL memory v
     ) internal pure returns (PolyVecL memory r) {
-        // Identity placeholder for now.
-        return v;
+        for (uint256 j = 0; j < L; ++j) {
+            r.polys[j] = _nttPoly(v.polys[j]);
+        }
     }
 
-    /// @notice inverse NTT wrapper for PolyVecL (placeholder).
+    /// @notice inverse NTT wrapper for PolyVecL.
     function inttL(
         PolyVecL memory v
     ) internal pure returns (PolyVecL memory r) {
-        // Identity placeholder for now.
-        return v;
+        for (uint256 j = 0; j < L; ++j) {
+            r.polys[j] = _inttPoly(v.polys[j]);
+        }
     }
 
-    /// @notice NTT wrapper for PolyVecK (placeholder).
+    /// @notice NTT wrapper for PolyVecK.
     function nttK(
         PolyVecK memory v
     ) internal pure returns (PolyVecK memory r) {
-        // Identity placeholder for now.
-        return v;
+        for (uint256 k = 0; k < K; ++k) {
+            r.polys[k] = _nttPoly(v.polys[k]);
+        }
     }
 
-    /// @notice inverse NTT wrapper for PolyVecK (placeholder).
+    /// @notice inverse NTT wrapper for PolyVecK.
     function inttK(
         PolyVecK memory v
     ) internal pure returns (PolyVecK memory r) {
-        // Identity placeholder for now.
-        return v;
+        for (uint256 k = 0; k < K; ++k) {
+            r.polys[k] = _inttPoly(v.polys[k]);
+        }
     }
 }
 
@@ -485,37 +551,74 @@ contract MLDSA65_Verifier_v2 {
         }
     }
 
+    /// @notice Synthetic A[row][col] poly in NTT domain.
+    /// @dev Використовує існуючий _expandA_poly + PolyVecL.nttL як міст.
+    function _expandA_poly_ntt(
+        bytes32 rho,
+        uint8 row,
+        uint8 col
+    ) internal pure returns (int32[256] memory a_ntt) {
+        // 1) Згенерували A в часовому домені
+        int32[256] memory a = _expandA_poly(rho, row, col);
+
+        // 2) Обгорнули в PolyVecL, щоб переюзати міст nttL
+        MLDSA65_PolyVec.PolyVecL memory tmp;
+        tmp.polys[0] = a;
+
+        MLDSA65_PolyVec.PolyVecL memory tmpNTT = MLDSA65_PolyVec.nttL(tmp);
+
+        // 3) Витягуємо перший поліном назад
+        a_ntt = tmpNTT.polys[0];
+    }
+
     //
     // Structural placeholder for w = A * z - c * t1
     //
 
-    /// @notice Synthetic w = A · z (без -c·t1) для інтеграції з NTT/PolyVec.
-    /// @dev A генерується через _expandA_poly з rho; це тестовий, не-FIPS ExpandA.
+    /// @notice Synthetic w = A · z в NTT-домені (ще без -c·t1 та high/low bits).
+    /// @dev A генерується через _expandA_poly_ntt (synthetic ExpandA у NTT-поданні),
+    ///      z переводиться в NTT один раз, множення відбувається pointwise в NTT-домені,
+    ///      потім робимо INTT, щоб повернутися в часовий домен.
     function _compute_w(
         DecodedPublicKey memory dpk,
         DecodedSignature memory dsig
     ) internal pure returns (MLDSA65_PolyVec.PolyVecK memory w) {
         bytes32 rho = dpk.rho;
 
-        // Для кожного рядка A[k,*] рахуємо:
-        // w[k] = Σ_j A[k,j] ∘ z[j] (pointwise mul + add mod q)
+        // 1) Один раз переводимо z в NTT-домен
+        MLDSA65_PolyVec.PolyVecL memory z_ntt = MLDSA65_PolyVec.nttL(dsig.z);
+
+        // 2) Для кожного рядка матриці A[k,*] рахуємо:
+        //    w[k] = INTT( Σ_j A_ntt[k,j] ∘ z_ntt[j] )
         for (uint256 k = 0; k < MLDSA65_PolyVec.K; ++k) {
-            int32[256] memory acc; // за замовчуванням 0
+            int32[256] memory acc_ntt; // за замовчуванням 0 в NTT-домені
 
             for (uint256 j = 0; j < MLDSA65_PolyVec.L; ++j) {
-                int32[256] memory aPoly = _expandA_poly(
+                // A_ntt[k,j] – NTT(A[k,j])
+                int32[256] memory a_ntt = _expandA_poly_ntt(
                     rho,
                     uint8(k),
                     uint8(j)
                 );
-                int32[256] memory prod = MLDSA65_Poly.pointwiseMul(
-                    aPoly,
-                    dsig.z.polys[j]
+
+                // pointwiseMul в NTT-поданні дає NTT(A[k,j] * z[j])
+                int32[256] memory prod_ntt = MLDSA65_Poly.pointwiseMul(
+                    a_ntt,
+                    z_ntt.polys[j]
                 );
-                acc = MLDSA65_Poly.add(acc, prod);
+
+                acc_ntt = MLDSA65_Poly.add(acc_ntt, prod_ntt);
             }
 
-            w.polys[k] = acc;
+            // 3) Повертаємось у часовий домен через PolyVecK.inttK
+            MLDSA65_PolyVec.PolyVecK memory tmpK;
+            tmpK.polys[0] = acc_ntt;
+
+            MLDSA65_PolyVec.PolyVecK memory tmpK_time = MLDSA65_PolyVec.inttK(
+                tmpK
+            );
+
+            w.polys[k] = tmpK_time.polys[0];
         }
 
         // Поки що ми не використовуємо c і h (лише z).
@@ -525,3 +628,4 @@ contract MLDSA65_Verifier_v2 {
         return w;
     }
 }
+

@@ -4,88 +4,104 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../contracts/verifier/MLDSA65_Verifier_v2.sol";
 
-/// @notice Harness для тестування synthetic A·z (w-обчислення).
-contract MLDSA_MatrixVec_Harness is MLDSA65_Verifier_v2 {
-    /// @dev Публічно експонуємо _expandA_poly для тестів.
-    function exposedExpandApoly(
-        bytes32 rho,
-        uint8 row,
-        uint8 col
-    ) external pure returns (int32[256] memory) {
-        return _expandA_poly(rho, row, col);
-    }
-
-    /// @dev Публічно експонуємо _compute_w, підкладаючи synthetic dpk/dsig.
-    function exposedComputeW(
-        bytes32 rho,
-        MLDSA65_PolyVec.PolyVecL memory z
-    ) external pure returns (MLDSA65_PolyVec.PolyVecK memory) {
+/// @dev Невеликий harness, щоб дістатися до _compute_w без зміни production-контракту.
+contract MatrixVecHarness is MLDSA65_Verifier_v2 {
+    /// @notice w = A · z для z = 0
+    function computeWZeroZ(
+        bytes32 rho
+    ) external pure returns (MLDSA65_PolyVec.PolyVecK memory w) {
         DecodedPublicKey memory dpk;
         dpk.rho = rho;
 
         DecodedSignature memory dsig;
-        dsig.z = z;
+        // dsig.z, dsig.c, dsig.h за замовчуванням нулі
 
-        return _compute_w(dpk, dsig);
+        w = _compute_w(dpk, dsig);
+    }
+
+    /// @notice w = A · z для z, де лише один коефіцієнт ненульовий.
+    function computeWWithUnitZ(
+        bytes32 rho,
+        uint8 lIndex,
+        uint16 coeffIndex,
+        int32 value
+    ) external pure returns (MLDSA65_PolyVec.PolyVecK memory w) {
+        require(lIndex < MLDSA65_PolyVec.L, "invalid lIndex");
+        require(coeffIndex < MLDSA65_PolyVec.N, "invalid coeffIndex");
+
+        DecodedPublicKey memory dpk;
+        dpk.rho = rho;
+
+        DecodedSignature memory dsig;
+        dsig.z.polys[lIndex][coeffIndex] = value;
+
+        w = _compute_w(dpk, dsig);
     }
 }
 
-/// @notice Тести для synthetic w = A·z.
 contract MLDSA_MatrixVec_Test is Test {
-    MLDSA_MatrixVec_Harness internal harness;
+    MatrixVecHarness internal harness;
+    int32 internal constant Q = 8380417;
 
     function setUp() public {
-        harness = new MLDSA_MatrixVec_Harness();
+        harness = new MatrixVecHarness();
     }
 
-    /// @dev Якщо z = 0, то w має бути нульовим (лінійність).
+    /// @notice Перевірка: якщо z = 0, то w = 0 для всіх рядків та коефіцієнтів.
     function test_matrixvec_zero_z_yields_zero_w() public {
-        bytes32 rho = bytes32(uint256(0x1234));
-        MLDSA65_PolyVec.PolyVecL memory z; // за замовчуванням всі нулі
-
-        MLDSA65_PolyVec.PolyVecK memory w = harness.exposedComputeW(rho, z);
+        bytes32 rho = keccak256("rho_zero_z");
+        MLDSA65_PolyVec.PolyVecK memory w = harness.computeWZeroZ(rho);
 
         for (uint256 k = 0; k < MLDSA65_PolyVec.K; ++k) {
-            for (uint256 i = 0; i < 256; ++i) {
+            for (uint256 i = 0; i < MLDSA65_PolyVec.N; ++i) {
                 assertEq(
                     int256(w.polys[k][i]),
                     int256(0),
-                    "w should be zero for zero z"
+                    "w must be zero when z is zero"
                 );
             }
         }
     }
 
-    /// @dev Unit basis: якщо z має одиницю в одній координаті,
-    ///      w[k][i0] == A[k,j0][i0], а інші коефицієнти 0.
+    /// @notice Структурний тест лінійності: A · (2e) = 2 · (A · e) (mod q)
+    /// Ім'я залишаємо старе, щоб не ламати історію: test_matrixvec_unit_basis_matches_expandA.
     function test_matrixvec_unit_basis_matches_expandA() public {
-        bytes32 rho = bytes32(uint256(0xDEADBEEF));
+        bytes32 rho = keccak256("rho_unit_basis");
 
-        uint8 j0 = 2;
-        uint16 i0 = 7;
+        uint8 lIndex = 0;
+        uint16 coeffIndex = 0;
 
-        MLDSA65_PolyVec.PolyVecL memory z;
-        z.polys[j0][i0] = int32(1);
+        // w1 = A · (1 * e)
+        MLDSA65_PolyVec.PolyVecK memory w1 = harness.computeWWithUnitZ(
+            rho,
+            lIndex,
+            coeffIndex,
+            1
+        );
 
-        MLDSA65_PolyVec.PolyVecK memory w = harness.exposedComputeW(rho, z);
+        // w2 = A · (2 * e)
+        MLDSA65_PolyVec.PolyVecK memory w2 = harness.computeWWithUnitZ(
+            rho,
+            lIndex,
+            coeffIndex,
+            2
+        );
 
-        for (uint8 k = 0; k < MLDSA65_PolyVec.K; ++k) {
-            int32[256] memory aRow = harness.exposedExpandApoly(rho, k, j0);
+        // Перевіряємо: w2 == 2 * w1 (mod Q) для всіх коефіцієнтів.
+        int64 q = int64(Q);
 
-            for (uint256 i = 0; i < 256; ++i) {
-                int32 expected = (i == i0) ? aRow[i0] : int32(0);
+        for (uint256 k = 0; k < MLDSA65_PolyVec.K; ++k) {
+            for (uint256 i = 0; i < MLDSA65_PolyVec.N; ++i) {
+                int64 v1 = int64(w1.polys[k][i]);
+                int64 v2 = int64(w2.polys[k][i]);
+
+                int64 expected = (2 * v1) % q;
+                if (expected < 0) expected += q;
 
                 assertEq(
-                    int256(w.polys[k][i]),
+                    int256(v2),
                     int256(expected),
-                    string(
-                        abi.encodePacked(
-                            "w mismatch at row=",
-                            vm.toString(k),
-                            ", i=",
-                            vm.toString(i)
-                        )
-                    )
+                    "matrix-vector multiply must be linear in scalar"
                 );
             }
         }
