@@ -1,305 +1,136 @@
-# ML-DSA-65 Ethereum Verification
+# Gas per secure bit
 
-[![Solidity](https://img.shields.io/badge/Solidity-0.8.20-blue)](https://soliditylang.org/)
-[![Foundry](https://img.shields.io/badge/Foundry-tested-green)](https://getfoundry.sh/)
-[![FIPS-204](https://img.shields.io/badge/FIPS--204-ML--DSA--65-purple)](https://csrc.nist.gov/pubs/fips/204/final)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+**Benchmarking post-quantum signatures and verifiable randomness by gas cost per cryptographically secure bit.**
 
-**Status:** Active Development – Foundation Complete, Cryptography In Progress  
-**License:** MIT
+This repository is an experimental lab spun out of  
+[`ml-dsa-65-ethereum-verification`](https://github.com/pipavlo82/ml-dsa-65-ethereum-verification).  
+Here we are free to break, refactor and experiment without touching the original verifier repo.
 
----
+The core idea of this project is a simple, chain-aware metric:
 
-## Overview
+\[
+\text{Gas per secure bit} = \frac{\text{gas\_verify}}{H_\text{min}(\text{object})}
+\]
 
-Reference implementation and test infrastructure for **FIPS 204 (ML-DSA-65)** post-quantum signature verification on Ethereum.
+where
 
-**Focus areas:**
-- **Standardization:** Algorithm-agnostic `IPQVerifier` interface  
-- **FIPS 204 compliance:** Strict adherence to NIST formats  
-- **Working implementation:** Structural parser complete  
-- **Test infrastructure:** Real test vectors + NIST KAT-compatible format  
-- **Ecosystem alignment:** Coordinated with Falcon-1024 and Dilithium developers  
+- `gas_verify` – on-chain gas cost to verify a signature or VRF proof,
+- \(H_\text{min}\) – min-entropy / effective security level in bits:
+  - for signatures – effective security level λ (e.g. 128-bit),
+  - for randomness / VRF – min-entropy of the verified random output.
 
-This repository contributes to the broader effort to define PQ verification standards for Ethereum, alongside:
-
-- **Falcon-1024:** [QuantumAccount](https://github.com/Cointrol-Limited/QuantumAccount) by [@paulangusbark](https://github.com/paulangusbark)  
-- **ETHDILITHIUM / ETHFALCON:** [ZKNoxHQ implementations](https://github.com/ZKNoxHQ) by [@rdubois-crypto](https://github.com/rdubois-crypto)
+This lets us compare schemes not just by “gas per verify”, but by **gas per actual cryptographic security / entropy**.
 
 ---
 
-## Implementation Status
+## Goals
 
-### ✅ Structural ML-DSA-65 Parser (Complete)
+1. **Define the metric**
 
-`MLDSA65Verifier.sol` includes full structural decoding:
+   - Formalize “gas per secure bit” for:
+     - PQ signatures: **ML-DSA-65**, Falcon, Dilithium, ECDSA, BLS.
+     - Verifiable randomness sources: Re4ctoR VRF, Chainlink-style VRF, RANDAO-style beacons, etc.
+   - Specify how to estimate \(H_\text{min}\) under clear threat models.
 
-**Validation:**
-- Public key size: **1,952 bytes**
-- Signature size: **3,309 bytes**
+2. **Build an open benchmarking suite**
 
-**Parsing:**
-- `c_tilde` challenge  
-- 256 × `z_i` coefficients (int32)  
-- Hint bits vector `h`  
-- Domain separation computation  
+   - Solidity contracts + Foundry tests that:
+     - verify signatures and VRF proofs on-chain,
+     - record `gas_used`,
+     - export results as CSV/JSON for analysis.
+   - Include both:
+     - classic metrics (`gas_per_call`, `gas_per_byte`),
+     - new metric (`gas_per_secure_bit`).
 
-**Gas measurements:**
-```
-Structural parsing: ~235,085 gas
-Full test suite:    ~259,259 gas
-```
+3. **Publish comparable datasets**
 
-This parser forms the foundation for cryptographic verification logic.
+   For each scheme / chain profile (Ethereum L1, typical L2s):
 
-### 🔄 Cryptographic Verification (In Progress)
+   - `scheme`, `chain`, `gas_verify`, `lambda_eff`, `H_min`,
+   - `gas_per_secure_bit`, `gas_per_byte`, `latency_ms`, `trust_model`.
 
-Next implementation steps:
+4. **Move toward a standard / draft spec**
 
-- [ ] NTT (Number Theoretic Transform)  
-- [ ] Polynomial arithmetic over Z_q  
-- [ ] Challenge recomputation  
-- [ ] Norm constraint checking  
-- [ ] Full signature verification pipeline  
-
-**Target:** **7–9M gas** for full ML-DSA-65 verification (based on Dilithium/Falcon benchmarks)
+   - A Markdown spec (can evolve into an EIP / whitepaper) describing:
+     - definitions,
+     - assumptions,
+     - measurement methodology,
+     - reporting format for “gas per secure bit”.
 
 ---
 
-## 🔬 Research Notes
+## Repository layout (planned)
 
-This repository includes a dedicated research section documenting low-level arithmetic experiments, benchmarking, and optimization strategies for ML-DSA-65 verification on EVM.
+This repo currently contains the imported ML-DSA-65 verifier layout from the original project.  
+We will gradually refactor it into the following structure:
 
-### Current Research Highlight  
-**Montgomery Arithmetic for ML-DSA-65 — correctness, benchmarks, and gas analysis**
+- `spec/`  
+  Formal documents and drafts:
+  - `gas_per_secure_bit.md` – metric definition, threat models, examples.
+  - `mldsa_profile.md` – profile for ML-DSA-65 on Ethereum.
 
-The study covers:
+- `contracts/`  
+  Solidity benchmarks and helpers:
+  - `mldsa/` – ML-DSA-65 verifier components (NTT, Poly, PolyVec, Hint, Verifier).
+  - `vrf/` – VRF / randomness adapters (Re4ctoR VRF, RANDAO-style beacons, etc.) [future].
 
-- ✅ Full Montgomery implementation for the ML-DSA-65 field  
-- ✅ Equivalence proof against `mulmod`  
-- ✅ 200+ correctness test cases  
-- ✅ Polynomial multiplication benchmarks (256-coeff workloads)  
-- ✅ Gas comparison: Montgomery vs native `mulmod`  
-- ✅ Practical implications for NTT design  
-- ⚠️ Why Montgomery is **not gas-efficient** for small modulus q≈2²³  
-- ✅ Recommended optimization strategy for the real ML-DSA verifier  
-2. **Barrett reduction (experimental, rejected)**  
-   - Multiple Barrett variants evaluated (64-bit style and 256-bit style)  
-   - No clear gas advantage over native `mulmod` for `q ≈ 2²³`  
-   - Added complexity and correctness risks for 256-bit inputs  
-   - Conclusion: treated as **R&D only**; production path will rely on `mulmod`
+- `scripts/`  
+  Tooling to run and collect benchmarks:
+  - Foundry test runners,
+  - small Python helpers to parse gas reports and compute metrics.
 
-### 📄 Detailed Research Document  
-➡️ **[`research/README_MONTGOMERY.md`](research/README_MONTGOMERY.md)**
-
-This report guides the design of the upcoming NTT, Barrett reduction module, and overall gas-optimization strategy for ML-DSA-65 on EVM.
+- `data/`  
+  Generated datasets:
+  - CSV/JSON with `gas_per_secure_bit` and `gas_per_byte` for each experiment.
 
 ---
 
-## Repository Structure
-```
-ml-dsa-65-ethereum-verification/
-│
-├── contracts/
-│   ├── MontgomeryMLDSA.sol          # Montgomery R&D implementation
-│   └── MLDSA65Verifier.sol          # Structural parser (complete)
-│
-├── test/
-│   ├── MontgomeryMLDSA.t.sol        # Correctness + gas benchmarks
-│   ├── MLDSA_StructuralParser.t.sol # Parsing + gas tests
-│   └── MLDSA_RealVector.t.sol       # End-to-end vector tests
-│
-├── test_vectors/
-│   └── vector_001.json              # PQ test vector (canonical format)
-│
-├── scripts/
-│   └── convert_vector.py            # Test vector utilities
-│
-└── research/
-    └── README_MONTGOMERY.md         # Montgomery arithmetic R&D report
-```
+## Current status
+
+- `main` branch is a sandbox clone of `ml-dsa-65-ethereum-verification`.
+- ML-DSA-65 NTT / verifier contracts and tests are present and working.
+- No public benchmark datasets yet – everything is experimental.
 
 ---
 
-## IPQVerifier Interface (Draft)
+## Next steps
 
-A proposed unified interface for post-quantum signature verification:
-```solidity
-interface IPQVerifier {
-    function verify(
-        bytes memory message,
-        bytes memory signature,
-        bytes memory publicKey
-    ) external view returns (bool);
+Short-term roadmap:
 
-    function verifyBatch(
-        bytes[] memory messages,
-        bytes[] memory signatures,
-        bytes memory publicKey
-    ) external view returns (bool[] memory);
+1. **Spec**
 
-    function algorithmName() external pure returns (string memory);
+   - Add `spec/gas_per_secure_bit.md` with:
+     - exact formulae,
+     - example calculations for ML-DSA-65 (128-bit security),
+     - notes on how we treat min-entropy for randomness sources.
 
-    function expectedSizes() external pure returns (
-        uint256 pkSize,
-        uint256 sigSize
-    );
-}
-```
+2. **ML-DSA-65 benchmark**
 
-**Goals:**
-- Unified wallet/AA/sequencer integration
-- Cross-algorithm benchmarking (Dilithium, Falcon, ML-DSA)
-- Standardized precompile discussions
+   - Extract the verifier into `contracts/mldsa/`.
+   - Add a dedicated Foundry test that:
+     - runs one or more verification calls,
+     - records `gas_used`,
+     - emits it in a machine-readable format.
 
----
+3. **Metric computation**
 
-## Test Vectors
+   - Small script that reads gas results and outputs a table:
 
-### JSON Format (NIST-compatible)
-```json
-{
-  "vector": {
-    "name": "tv0_canonical",
-    "message_hash": "0x...",
-    "pubkey": { 
-      "raw": "0x...", 
-      "length": 1952 
-    },
-    "signature": { 
-      "raw": "0x...", 
-      "length": 3309 
-    },
-    "expected_result": true
-  }
-}
-```
+     ```text
+     scheme,chain,gas_verify,lambda_eff,gas_per_secure_bit
+     MLDSA65,ethereum,2700000,128,21093.75
+     ```
 
-### Running Tests
-```bash
-# All tests
-forge test -vvv
+4. **VRF / randomness**
 
-# Structural parser tests
-forge test -vvv --match-test structural
-
-# Real vector tests
-forge test -vvv --match-test real
-```
-
-### Adding New Test Vectors
-
-**Requirements:**
-- PK = 1,952 bytes (hex)
-- Signature = 3,309 bytes (hex)
-- Message_hash = 32 bytes
-
-**Save vectors as:**
-```bash
-test_vectors/vector_XXX.json
-```
-
-**Validate with:**
-```bash
-forge test -vvv --match-test real
-```
+   - Add first adapter for a verifiable randomness source (e.g. Re4ctoR VRF).
+   - Define and compute `gas per verifiable random bit` using the same framework.
 
 ---
 
-## Calldata Comparison
+## Notes
 
-| Component  | Falcon-1024 | ML-DSA-65 | Difference |
-|------------|-------------|-----------|------------|
-| Public key | 1,793 B     | 1,952 B   | +9%        |
-| Signature  | ~1,330 B    | 3,309 B   | +149%      |
-| **Total**  | **~3,123 B**| **5,261 B** | **+68%** |
-
----
-
-## Gas Model
-
-| Scheme                     | Gas Cost | Status         |
-|----------------------------|----------|----------------|
-| Structural parser (current)| ~235k    | ✅ Complete     |
-| **ML-DSA-65 (full)**       | **7–9M** | 🔄 In progress |
-| Falcon-1024                | ~10M     | Reference      |
-| ETHDILITHIUM               | 6.6M     | Reference      |
-
----
-
-## Roadmap
-
-### Phase 1: Foundation ✅ (Complete)
-- [x] Interface design
-- [x] Structural parser
-- [x] Test vectors
-- [x] Gas framework
-
-### Phase 2: Cryptographic Verification 🔄 (Ongoing)
-- [ ] NTT
-- [ ] Polynomial arithmetic
-- [ ] Challenge verification
-- [ ] Norm constraints
-
-### Phase 3: Optimization 📋
-- [ ] Yul-level optimization
-- [ ] Memory layout improvements
-- [ ] Benchmarking vs Falcon/Dilithium
-
-### Phase 4: Standardization 📋
-- [ ] STANDARDIZATION.md
-- [ ] Community review
-- [ ] EIP draft
-
----
-
-## Contributing
-
-We welcome contributions in:
-
-- ✅ PQ cryptography
-- ✅ EVM gas optimization
-- ✅ NTT / polynomial arithmetic
-- ✅ Standardization review
-
-**Coordination with:**
-- [@paulangusbark](https://github.com/paulangusbark) - Falcon-1024
-- [@rdubois-crypto](https://github.com/rdubois-crypto) - ETHDILITHIUM/ETHFALCON
-- Ethereum Foundation researchers
-
-**Discussion:** [EthResear.ch thread](https://ethresear.ch/t/the-road-to-post-quantum-ethereum-transaction-is-paved-with-account-abstraction/21277)
-
----
-
-## References
-
-### Standards
-- **[FIPS 204](https://csrc.nist.gov/pubs/fips/204/final)** - ML-DSA Standard
-
-### Ethereum Improvement Proposals
-- **[EIP-8051](https://ethereum-magicians.org/t/eip-8051-ml-dsa-verification/18752)** - ML-DSA Verification
-- **[EIP-8052](https://ethereum-magicians.org/t/eip-8052-precompile-for-falcon-support/18740)** - Falcon Support
-
-### Related Implementations
-- **[QuantumAccount](https://github.com/Cointrol-Limited/QuantumAccount)** - Falcon-1024 (~10M gas)
-- **[ETHFALCON](https://github.com/ZKNoxHQ/ETHFALCON)** - Falcon-512 (2M gas)
-- **[ETHDILITHIUM](https://github.com/ZKNoxHQ/ETHDILITHIUM)** - Dilithium (6.6M gas)
-
----
-
-## License
-
-MIT License
-
----
-
-
-- Research: [ethresear.ch](https://ethresear.ch/)
-
----
-
-<div align="center">
-
-Building quantum-resistant Ethereum infrastructure 🔐
-
-</div>
+- This repo is intentionally experimental.  
+  Code and structure may change aggressively while we explore the metric.
+- Once the methodology stabilizes, the spec and benchmark suite can be split out
+  into a more formal “standard” repository and referenced by other projects.
