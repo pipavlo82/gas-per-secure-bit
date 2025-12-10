@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {NTT_MLDSA_Real} from "../ntt/NTT_MLDSA_Real.sol";
+import {MLDSA65_ExpandA} from "./MLDSA65_ExpandA.sol";
 
 //
 // =============================
@@ -43,7 +44,7 @@ library MLDSA65_Poly {
     }
 
     /// @notice r = a ∘ b (pointwise) mod q, coefficient-wise multiply
-    /// @dev Simple reference implementation; later буде замінено на Montgomery/NTT-friendly.
+    /// @dev Simple reference implementation; later will be replaced by Montgomery/NTT-friendly version.
     function pointwiseMul(
         int32[256] memory a,
         int32[256] memory b
@@ -120,7 +121,7 @@ library MLDSA65_PolyVec {
     }
 
     // -----------------------------
-    //  Мости int32[256] <-> uint256[256]
+    //  Bridges int32[256] <-> uint256[256]
     // -----------------------------
 
     function _toNTTDomain(
@@ -158,24 +159,9 @@ library MLDSA65_PolyVec {
     function _inttPoly(
         int32[256] memory a
     ) internal pure returns (int32[256] memory r) {
-        // 1) Переходимо в uint-домен
         uint256[256] memory tmp = _toNTTDomain(a);
-
-        // 2) Реальний INTT у uint-домені
         tmp = NTT_MLDSA_Real.intt(tmp);
-
-        // 3) Повертаємося в int32-домен
-        int32[256] memory raw = _fromNTTDomain(tmp);
-
-        // 4) Компенсуємо глобальний фліп знака: робимо r = -raw (mod Q)
-        int64 q = int64(Q);
-        for (uint256 i = 0; i < N; ++i) {
-            int64 v = int64(raw[i]);
-            v = -v;
-            v %= q;
-            if (v < 0) v += q;
-            r[i] = int32(v);
-        }
+        r = _fromNTTDomain(tmp);
     }
 
     /// @notice NTT wrapper for PolyVecL.
@@ -224,7 +210,7 @@ library MLDSA65_PolyVec {
 /// @notice Hint vector helpers for ML-DSA-65.
 library MLDSA65_Hint {
     uint256 internal constant N = 256;
-    uint256 internal constant L = 5; // hint живе в тому ж L-вимірі
+    uint256 internal constant L = 5; // hint lives in the same L-dimension
 
     /// @notice Hint vector: flags in {-1, 0, 1} per coefficient.
     struct HintVecL {
@@ -245,7 +231,7 @@ library MLDSA65_Hint {
     }
 
     /// @notice Placeholder applyHint for PolyVecL.
-    /// @dev Поки що це identity; реальна логіка буде додана разом із full decomposition.
+    /// @dev Currently identity; real logic will be added together with full decomposition.
     function applyHintL(
         MLDSA65_PolyVec.PolyVecL memory w,
         HintVecL memory /*h*/
@@ -260,8 +246,8 @@ library MLDSA65_Hint {
 // ===================
 //
 
-/// @notice ML-DSA-65 Verifier v2 – skeleton для реального verification pipeline.
-/// @dev Зараз тут: ABI, decode-шар, підготовка до поліно/NTT шару.
+/// @notice ML-DSA-65 Verifier v2 – skeleton for the real verification pipeline.
+/// @dev Currently contains: ABI, decode layer, preparation for polynomial/NTT layer.
 contract MLDSA65_Verifier_v2 {
     using MLDSA65_Poly for int32[256];
 
@@ -297,7 +283,7 @@ contract MLDSA65_Verifier_v2 {
         MLDSA65_Hint.HintVecL h;
     }
 
-    /// @notice Main verification entrypoint (ще не реалізований).
+    /// @notice Main verification entrypoint (not implemented yet).
     function verify(
         PublicKey memory pk,
         Signature memory sig,
@@ -314,12 +300,12 @@ contract MLDSA65_Verifier_v2 {
         w;
         message_digest;
 
-        // Поки що завжди false – verification pipeline ще не підключений.
+        // For now always false – verification pipeline is not yet wired.
         return false;
     }
 
     //
-    // Decode helpers – оверлоади для сумісності з тестами
+    // Decode helpers – overloads for test compatibility
     //
 
     /// @notice Decode public key from struct wrapper.
@@ -329,7 +315,7 @@ contract MLDSA65_Verifier_v2 {
         return _decodePublicKeyRaw(pk.raw);
     }
 
-    /// @notice Decode public key directly from raw bytes (для старих harness-ів).
+    /// @notice Decode public key directly from raw bytes (for old harnesses).
     function _decodePublicKey(
         bytes memory pkRaw
     ) internal pure returns (DecodedPublicKey memory dpk) {
@@ -343,7 +329,7 @@ contract MLDSA65_Verifier_v2 {
         return _decodeSignatureRaw(sig.raw);
     }
 
-    /// @notice Decode signature directly from raw bytes (для старих harness-ів).
+    /// @notice Decode signature directly from raw bytes (for old harnesses).
     function _decodeSignature(
         bytes memory sigRaw
     ) internal pure returns (DecodedSignature memory dsig) {
@@ -351,21 +337,21 @@ contract MLDSA65_Verifier_v2 {
     }
 
     //
-    // Реальні тіла decode-логіки (Raw)
+    // Real decode logic (Raw)
     //
 
     /// @notice Decode public key bytes into a structured view.
-    /// @dev Два режими:
-    /// - len >= PK_MIN_LEN (1952): повний FIPS-розпак t1 + rho (новий шлях)
-    /// - len < PK_MIN_LEN: legacy-режим (тільки rho + перші 4 coeff t1[0] з offset 32)
+    /// @dev Two modes:
+    /// - len >= PK_MIN_LEN (1952): full FIPS unpack t1 + rho (new path)
+    /// - len < PK_MIN_LEN: legacy mode (only rho + first 4 coeff t1[0] from offset 32)
     function _decodePublicKeyRaw(
         bytes memory pkRaw
     ) internal pure returns (DecodedPublicKey memory dpk) {
         uint256 len = pkRaw.length;
 
-        // 1) Новий FIPS-режим: повний t1 + rho
+        // 1) New FIPS mode: full t1 + rho
         if (len >= PK_MIN_LEN) {
-            // rho = останні 32 байти
+            // rho = last 32 bytes
             uint256 rhoOffset = len - RHO_BYTES;
             bytes32 rhoBytes;
             assembly {
@@ -373,14 +359,14 @@ contract MLDSA65_Verifier_v2 {
             }
             dpk.rho = rhoBytes;
 
-            // t1: перші 1920 байтів (упаковані 10-бітні коефіцієнти)
+            // t1: first 1920 bytes (packed 10-bit coefficients)
             _decodeT1Packed(pkRaw, dpk.t1);
             return dpk;
         }
 
-        // 2) Legacy-режим (старі тести Decode* очікують таку поведінку).
+        // 2) Legacy mode (old Decode* tests expect this behaviour).
 
-        // rho = останні 32 байти, якщо їх достатньо
+        // rho = last 32 bytes, if available
         if (len >= 32) {
             uint256 off = len - 32;
             bytes32 rhoLegacy;
@@ -390,8 +376,8 @@ contract MLDSA65_Verifier_v2 {
             dpk.rho = rhoLegacy;
         }
 
-        // t1[0][0..3] — старий FIPSPack-режим:
-        // перші 4 коефіцієнти беруться з pkRaw[32..36] (5 байтів)
+        // t1[0][0..3] — old FIPSPack mode:
+        // first 4 coefficients are taken from pkRaw[32..36] (5 bytes)
         if (len >= 32 + 5) {
             uint256 base = 32;
 
@@ -412,12 +398,12 @@ contract MLDSA65_Verifier_v2 {
             dpk.t1.polys[0][3] = int32(int16(t3c));
         }
 
-        // якщо len < 32 або < 37 — просто повертаємо те, що є (rho=0, t1=0)
+        // if len < 32 or < 37 — simply return with default rho=0, t1=0
     }
 
-    /// @dev Розпаковує t1 з перших 1920 байтів src у PolyVecK.
-    /// Очікуваний формат: для кожного з K поліномів:
-    /// 256 коефіцієнтів по 10 біт, запаковані як 64 групи по 4 coeffs → 5 байтів.
+    /// @dev Unpacks t1 from the first 1920 bytes of src into PolyVecK.
+    /// Expected format: for each of K polynomials:
+    /// 256 coefficients of 10 bits, packed as 64 groups of 4 coeffs → 5 bytes.
     function _decodeT1Packed(
         bytes memory src,
         MLDSA65_PolyVec.PolyVecK memory t1
@@ -426,9 +412,9 @@ contract MLDSA65_Verifier_v2 {
 
         uint256 byteOffset = 0;
 
-        // K = 6 поліномів
+        // K = 6 polynomials
         for (uint256 k = 0; k < MLDSA65_PolyVec.K; ++k) {
-            // 64 групи по 4 коефіцієнти на поліном
+            // 64 groups of 4 coefficients per polynomial
             for (uint256 group = 0; group < 64; ++group) {
                 uint256 idx = byteOffset;
 
@@ -456,16 +442,16 @@ contract MLDSA65_Verifier_v2 {
     }
 
     /// @notice Decode signature bytes into a structured view.
-    /// @dev Поведінка:
-    /// - якщо len >= 32: c = останні 32 байти; префікс до них = z (послідовність LE-коефів)
-    /// - якщо len < 32: c залишається 0; весь буфер використовується для z
-    /// У будь-якому випадку функція НЕ revert-ить на коротких сигнатурах.
+    /// @dev Behaviour:
+    /// - if len >= 32: c = last 32 bytes; prefix before that = z (sequence of LE-coeffs)
+    /// - if len < 32: c remains 0; entire buffer is used for z
+    /// In all cases function MUST NOT revert on short signatures.
     function _decodeSignatureRaw(
         bytes memory sigRaw
     ) internal pure returns (DecodedSignature memory dsig) {
         uint256 len = sigRaw.length;
 
-        // 1) c: тільки якщо є 32 байти в кінці
+        // 1) c: only if there are 32 bytes at the end
         if (len >= 32) {
             uint256 cOffset = len - 32;
             bytes32 cBytes;
@@ -475,17 +461,17 @@ contract MLDSA65_Verifier_v2 {
             dsig.c = cBytes;
         }
 
-        // 2) z: префікс до c (якщо len>=32) або весь буфер (якщо len<32)
+        // 2) z: prefix before c (if len>=32) or the whole buffer (if len<32)
         uint256 coeffBytes = len >= 32 ? (len - 32) : len;
-        uint256 coeffCount = coeffBytes / 4; // скільки повних 32-бітних coeff ми маємо
+        uint256 coeffCount = coeffBytes / 4; // number of full 32-bit coeffs we have
         uint256 idx = 0;
 
         if (coeffCount > 0) {
             for (uint256 j = 0; j < MLDSA65_PolyVec.L && idx < coeffCount; ++j) {
                 for (uint256 i = 0; i < MLDSA65_PolyVec.N && idx < coeffCount; ++i) {
                     uint256 off = idx * 4;
-                    // off + 4 завжди <= sigRaw.length завдяки тому,
-                    // що idx < coeffCount = floor(coeffBytes/4) і coeffBytes <= len.
+                    // off + 4 is always <= sigRaw.length thanks to:
+                    // idx < coeffCount = floor(coeffBytes/4) and coeffBytes <= len.
                     int32 coeff = _decodeCoeffLE(sigRaw, off);
                     dsig.z.polys[j][i] = coeff;
                     unchecked {
@@ -495,7 +481,7 @@ contract MLDSA65_Verifier_v2 {
             }
         }
 
-        // 3) h залишаємо нульовим (HintVecL за замовчуванням нульовий)
+        // 3) h remains zero (HintVecL defaults to all zeros)
     }
 
     //
@@ -503,7 +489,7 @@ contract MLDSA65_Verifier_v2 {
     //
 
     /// @notice Decode a single coefficient from 4 bytes in little-endian order, reduced mod Q.
-    /// @dev Низькорівневий helper; буде використаний і в реальному FIPS-204 packing.
+    /// @dev Low-level helper; will also be used in real FIPS-204 packing.
     function _decodeCoeffLE(
         bytes memory src,
         uint256 offset
@@ -523,51 +509,27 @@ contract MLDSA65_Verifier_v2 {
     }
 
     //
-    // Synthetic ExpandA(rho) — поки що тестове A, НЕ справжній FIPS ExpandA
+    // Synthetic ExpandA(rho) — still test-only A, NOT real FIPS-204 ExpandA
     //
 
-    /// @notice Synthetic A[row][col] poly, генерується з rho через keccak256.
-    /// @dev Це тестовий PRF, а не офіційний FIPS-204 ExpandA.
-    function _expandA_poly(
-        bytes32 rho,
-        uint8 row,
-        uint8 col
-    ) internal pure returns (int32[256] memory a) {
-        uint32 q = uint32(uint32(uint256(int256(Q))));
-        for (uint256 i = 0; i < 256; ++i) {
-            // Простий PRF: keccak256(rho || row || col || i)
-            bytes32 h = keccak256(
-                abi.encodePacked(rho, row, col, uint16(i))
-            );
-
-            // Беремо 24 біти з h[0..2] і зводимо по модулю q
-            uint32 v24 =
-                uint32(uint8(h[0])) |
-                (uint32(uint8(h[1])) << 8) |
-                (uint32(uint8(h[2])) << 16);
-
-            uint32 reduced = v24 % q;
-            a[i] = int32(int256(uint256(reduced)));
-        }
-    }
-
     /// @notice Synthetic A[row][col] poly in NTT domain.
-    /// @dev Використовує існуючий _expandA_poly + PolyVecL.nttL як міст.
+    /// @dev Uses MLDSA65_ExpandA.expandA_poly (time-domain synthetic ExpandA),
+    ///      then bridges via PolyVecL.nttL into the NTT domain.
     function _expandA_poly_ntt(
         bytes32 rho,
         uint8 row,
         uint8 col
     ) internal pure returns (int32[256] memory a_ntt) {
-        // 1) Згенерували A в часовому домені
-        int32[256] memory a = _expandA_poly(rho, row, col);
+        // 1) Generate A in the time domain via separate ExpandA library
+        int32[256] memory a = MLDSA65_ExpandA.expandA_poly(rho, row, col);
 
-        // 2) Обгорнули в PolyVecL, щоб переюзати міст nttL
+        // 2) Wrap into PolyVecL to reuse the NTT bridge
         MLDSA65_PolyVec.PolyVecL memory tmp;
         tmp.polys[0] = a;
 
         MLDSA65_PolyVec.PolyVecL memory tmpNTT = MLDSA65_PolyVec.nttL(tmp);
 
-        // 3) Витягуємо перший поліном назад
+        // 3) Extract the first polynomial back
         a_ntt = tmpNTT.polys[0];
     }
 
@@ -575,23 +537,23 @@ contract MLDSA65_Verifier_v2 {
     // Structural placeholder for w = A * z - c * t1
     //
 
-    /// @notice Synthetic w = A · z в NTT-домені (ще без -c·t1 та high/low bits).
-    /// @dev A генерується через _expandA_poly_ntt (synthetic ExpandA у NTT-поданні),
-    ///      z переводиться в NTT один раз, множення відбувається pointwise в NTT-домені,
-    ///      потім робимо INTT, щоб повернутися в часовий домен.
+    /// @notice Synthetic w = A · z in the NTT domain (still without -c·t1 and high/low bits).
+    /// @dev A is generated via _expandA_poly_ntt (synthetic ExpandA in NTT domain),
+    ///      z is transformed to NTT once, multiplication is pointwise in NTT domain,
+    ///      then INTT is used to return to the time domain.
     function _compute_w(
         DecodedPublicKey memory dpk,
         DecodedSignature memory dsig
     ) internal pure returns (MLDSA65_PolyVec.PolyVecK memory w) {
         bytes32 rho = dpk.rho;
 
-        // 1) Один раз переводимо z в NTT-домен
+        // 1) Convert z into NTT domain once
         MLDSA65_PolyVec.PolyVecL memory z_ntt = MLDSA65_PolyVec.nttL(dsig.z);
 
-        // 2) Для кожного рядка матриці A[k,*] рахуємо:
+        // 2) For each row of the matrix A[k,*] compute:
         //    w[k] = INTT( Σ_j A_ntt[k,j] ∘ z_ntt[j] )
         for (uint256 k = 0; k < MLDSA65_PolyVec.K; ++k) {
-            int32[256] memory acc_ntt; // за замовчуванням 0 в NTT-домені
+            int32[256] memory acc_ntt; // default zero in NTT domain
 
             for (uint256 j = 0; j < MLDSA65_PolyVec.L; ++j) {
                 // A_ntt[k,j] – NTT(A[k,j])
@@ -601,7 +563,7 @@ contract MLDSA65_Verifier_v2 {
                     uint8(j)
                 );
 
-                // pointwiseMul в NTT-поданні дає NTT(A[k,j] * z[j])
+                // pointwiseMul in NTT representation: NTT(A[k,j] * z[j])
                 int32[256] memory prod_ntt = MLDSA65_Poly.pointwiseMul(
                     a_ntt,
                     z_ntt.polys[j]
@@ -610,7 +572,7 @@ contract MLDSA65_Verifier_v2 {
                 acc_ntt = MLDSA65_Poly.add(acc_ntt, prod_ntt);
             }
 
-            // 3) Повертаємось у часовий домен через PolyVecK.inttK
+            // 3) Return to time domain via PolyVecK.inttK
             MLDSA65_PolyVec.PolyVecK memory tmpK;
             tmpK.polys[0] = acc_ntt;
 
@@ -621,11 +583,10 @@ contract MLDSA65_Verifier_v2 {
             w.polys[k] = tmpK_time.polys[0];
         }
 
-        // Поки що ми не використовуємо c і h (лише z).
+        // For now we do not use c and h (only z).
         dsig.c;
         dsig.h;
 
         return w;
     }
 }
-
