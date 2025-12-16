@@ -1,3 +1,6 @@
 ts_utc,repo,commit,scheme,bench_name,chain_profile,gas_verify,security_metric_type,security_metric_value,gas_per_secure_bit,hash_profile,notes
 2025-12-16T21:33:02Z,gas-per-secure-bit,855d73cb19d0073095233c810a76d359adc2f0d1,mldsa65,verify_poc_snapshot,EVM/L1,68901612,lambda_eff,128.0,538293.84375,unknown,from ml-dsa-65-ethereum-verification snapshot
 2025-12-16T21:33:02Z,gas-per-secure-bit,855d73cb19d0073095233c810a76d359adc2f0d1,mldsa65,preA_compute_w_fromPackedA_ntt,EVM/L1,1499354,lambda_eff,128.0,11713.703125,unknown,PreA microbench rho0/rho1
+2025-12-16T21:57:04Z,gas-per-secure-bit,47d154ff97e65aa927f34ce7d0bbe0b7ad4f633b,mldsa65,verify_poc_foundry,EVM/L1,68901612,lambda_eff,128.0,538293.84375,unknown,ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA)
+2025-12-16T22:01:19Z,gas-per-secure-bit,47d154ff97e65aa927f34ce7d0bbe0b7ad4f633b,mldsa65,verify_poc_foundry,EVM/L1,68901612,lambda_eff,128.0,538293.84375,unknown,ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA)
+2025-12-16T22:01:22Z,gas-per-secure-bit,47d154ff97e65aa927f34ce7d0bbe0b7ad4f633b,mldsa65,preA_compute_w_fromPackedA_ntt_foundry,EVM/L1,1499354,lambda_eff,128.0,11713.703125,unknown,ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA)
