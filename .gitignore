@@ -20,3 +20,9 @@ vendors/
 # Python cache
 __pycache__/
 *.pyc
+# python junk
+__pycache__/
+*.pyc
+
+# local vendors (clones)
+vendors/
