@@ -1,3 +1,15 @@
 out/
 cache/
 resp.json
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Vendor repos (cloned for benchmarks)
+vendors/
+
+# Local data can be committed for baseline, but avoid noise:
+# (leave results.* tracked if you want; otherwise uncomment)
+# data/results.jsonl
+# data/results.csv
