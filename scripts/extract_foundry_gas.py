@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import re, sys
+import re
+import sys
 
 needle = sys.argv[1] if len(sys.argv) > 1 else None
 text = sys.stdin.read()
@@ -9,17 +10,17 @@ if needle:
     if lines:
         text = "\n".join(lines)
 
-patterns = [
-    r"\(gas:\s*([0-9]+)\)",          # (gas: 123)
-    r":\s*([0-9]+)\s*$",             # "...: 123" at end of line (your PreA logs)
-    r"\bgas[:=]\s*([0-9]+)\b",       # gas: 123 / gas=123
-]
+# 1) Foundry style: "(gas: 123)"
+m = re.search(r"\(gas:\s*([0-9]+)\)", text)
+if m:
+    print(m.group(1))
+    sys.exit(0)
 
-for pat in patterns:
-    m = re.search(pat, text, flags=re.MULTILINE)
-    if m:
-        print(m.group(1))
-        sys.exit(0)
+# 2) Log style: "something: 123"
+ms = re.findall(r":\s*([0-9]+)\s*$", text, flags=re.M)
+if ms:
+    print(ms[-1])
+    sys.exit(0)
 
-print("ERROR: could not find gas number in forge output", file=sys.stderr)
+print("ERROR: could not extract gas from forge output", file=sys.stderr)
 sys.exit(2)
