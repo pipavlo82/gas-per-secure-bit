@@ -46,6 +46,8 @@ Most public comparisons stop at “gas per verify”. That hides the real tradeo
 This repo focuses on a normalized unit: **gas / secure-bit**, with explicit assumptions.
 
 ---
+![Gas per secure bit chart](docs/gas_per_secure_bit.svg)
+
 
 ## Gas snapshots (EVM/L1) — current dataset
 
