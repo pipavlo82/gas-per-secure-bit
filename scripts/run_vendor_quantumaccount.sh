@@ -7,16 +7,21 @@ VENDOR_DIR="${ROOT_DIR}/vendors/quantumaccount"
 QA_REF="${QA_REF:-main}"
 RESET_DATA="${RESET_DATA:-0}"
 
-if [ "${RESET_DATA}" = "1" ]; then
-  mkdir -p "${ROOT_DIR}/data"
-  : > "${ROOT_DIR}/data/results.jsonl"
-  : > "${ROOT_DIR}/data/results.csv"
+DATA_DIR="${ROOT_DIR}/data"
+JSONL="${DATA_DIR}/results.jsonl"
+CSV="${DATA_DIR}/results.csv"
+
+mkdir -p "${DATA_DIR}"
+
+if [[ "${RESET_DATA}" == "1" ]]; then
+  : > "${JSONL}"
+  : > "${CSV}"
 fi
 
 # Ensure vendor repo exists
-if [ ! -d "${VENDOR_DIR}/.git" ]; then
+if [[ ! -d "${VENDOR_DIR}/.git" ]]; then
   mkdir -p "${ROOT_DIR}/vendors"
-  git clone --recursive "https://github.com/Cointrol-Limited/QuantumAccount" "${VENDOR_DIR}"
+  git clone --recursive "https://github.com/Cointrol-Limited/QuantumAccount/" "${VENDOR_DIR}"
 fi
 
 pushd "${VENDOR_DIR}" >/dev/null
@@ -28,109 +33,101 @@ git pull --ff-only
 REPO_NAME="QuantumAccount"
 COMMIT_SHA="$(git rev-parse HEAD)"
 
-# helper: run a command, extract gas from either (a) forge "(gas: N)" or (b) log line prefix
+SCHEME="falcon1024"
+CHAIN_PROFILE="EVM/L1"
+SEC_TYPE="lambda_eff"
+LAMBDA="256.0"
+HASH_PROFILE="keccak256"
+
+append_row() {
+  local bench="$1"
+  local gas="$2"
+  local notes="$3"
+
+  local json
+  json="$(printf \
+    '{"repo":"%s","commit":"%s","scheme":"%s","bench_name":"%s","chain_profile":"%s","gas_verify":%s,"security_metric_type":"%s","security_metric_value":%s,"hash_profile":"%s","notes":"%s (ref=%s)"}' \
+    "${REPO_NAME}" "${COMMIT_SHA}" "${SCHEME}" "${bench}" "${CHAIN_PROFILE}" "${gas}" \
+    "${SEC_TYPE}" "${LAMBDA}" "${HASH_PROFILE}" "${notes}" "${QA_REF}" \
+  )"
+
+  python3 "${ROOT_DIR}/scripts/parse_bench.py" "${json}"
+}
+
 run_one_gas_paren() {
   local bench="$1"
   local cmd="$2"
-  local needle="$3"
-  local lambda="$4"
-  local notes="$5"
+  local notes="$3"
 
   echo "[run] ${bench}"
   local out
-  out="$(bash -lc "${cmd}")"
+  out="$(bash -lc "${cmd}")" || {
+    echo "${out}" >&2
+    return 1
+  }
 
   local gas
-  gas="$(echo "${out}" | sed -n 's/.*(gas: \([0-9]\+\)).*/\1/p' | tail -n 1)"
-  if [ -z "${gas}" ]; then
-    echo "ERROR: could not find '(gas: N)' in forge output" >&2
+  gas="$(echo "${out}" | sed -n 's/.*(gas: \([0-9]\+\)).*/\1/p' | head -n1)"
+  if [[ -z "${gas}" ]]; then
+    echo "Failed to parse (gas: N) for ${bench}" >&2
     echo "${out}" >&2
-    exit 1
+    return 1
   fi
 
-  python3 "${ROOT_DIR}/scripts/parse_bench.py" "{
-    \"repo\":\"${REPO_NAME}\",
-    \"commit\":\"${COMMIT_SHA}\",
-    \"scheme\":\"falcon1024\",
-    \"bench_name\":\"${bench}\",
-    \"chain_profile\":\"EVM/L1\",
-    \"gas_verify\":${gas},
-    \"security_metric_type\":\"lambda_eff\",
-    \"security_metric_value\":${lambda},
-    \"hash_profile\":\"keccak256\",
-    \"notes\":\"${notes} (ref=${QA_REF})\"
-  }"
-
-  echo "${out}" | grep -nE "${needle}|\\(gas:" -n || true
+  append_row "${bench}" "${gas}" "${notes}"
+  echo "${out}" | grep -E "\[PASS\]" -n || true
 }
 
-run_one_gas_logprefix() {
+run_one_gas_logline() {
   local bench="$1"
   local cmd="$2"
-  local log_prefix="$3"
-  local lambda="$4"
-  local notes="$5"
+  local logkey="$3"
+  local notes="$4"
 
   echo "[run] ${bench}"
   local out
-  out="$(bash -lc "${cmd}")"
+  out="$(bash -lc "${cmd}")" || {
+    echo "${out}" >&2
+    return 1
+  }
 
   local gas
-  gas="$(echo "${out}" | sed -n "s/.*${log_prefix}[[:space:]]*\\([0-9]\\+\\).*/\\1/p" | tail -n 1)"
-  if [ -z "${gas}" ]; then
-    echo "ERROR: could not find log prefix '${log_prefix}' in forge output" >&2
+  gas="$(echo "${out}" | sed -n "s/.*${logkey}[[:space:]]*:[[:space:]]*\\([0-9]\\+\\).*/\\1/p" | head -n1)"
+  if [[ -z "${gas}" ]]; then
+    echo "Failed to parse ${logkey}: N for ${bench}" >&2
     echo "${out}" >&2
-    exit 1
+    return 1
   fi
 
-  python3 "${ROOT_DIR}/scripts/parse_bench.py" "{
-    \"repo\":\"${REPO_NAME}\",
-    \"commit\":\"${COMMIT_SHA}\",
-    \"scheme\":\"falcon1024\",
-    \"bench_name\":\"${bench}\",
-    \"chain_profile\":\"EVM/L1\",
-    \"gas_verify\":${gas},
-    \"security_metric_type\":\"lambda_eff\",
-    \"security_metric_value\":${lambda},
-    \"hash_profile\":\"keccak256\",
-    \"notes\":\"${notes} (ref=${QA_REF})\"
-  }"
-
-  echo "${out}" | grep -nE "${log_prefix}|\\(gas:" -n || true
+  append_row "${bench}" "${gas}" "${notes}"
+  echo "${out}" | grep -E "${logkey}" -n || true
 }
 
-# 1) AA helper: EntryPoint.getUserOpHash (gas: N)
+# 1) EntryPoint.getUserOpHash (AA helper)
 run_one_gas_paren \
   "qa_getUserOpHash_foundry" \
-  "forge test --match-test testQuantumAccountGetUserOpHashViaEntry -vv 2>&1" \
-  "getUserOpHash" \
-  "256.0" \
+  "forge test --match-test testQuantumAccountGetUserOpHashViaEntry -vv" \
   "QuantumAccount: EntryPoint.getUserOpHash (AA helper)"
 
-# 2) end-to-end: EntryPoint.handleOps (gas: N)
+# 2) EntryPoint.handleOps end-to-end
 run_one_gas_paren \
   "qa_handleOps_userop_foundry" \
-  "forge test --match-test testQuantumAccountViaEntryPoint -vv 2>&1" \
-  "handleOps" \
-  "256.0" \
+  "forge test --match-test testQuantumAccountViaEntryPoint -vv" \
   "QuantumAccount: EntryPoint.handleOps end-to-end (includes AA pipeline)"
 
-# 3) account-level validation (LOG): gas_validateUserOp: N
-run_one_gas_logprefix \
+# 3) QuantumAccount.validateUserOp (log-reported internal gas)
+run_one_gas_logline \
   "qa_validateUserOp_userop_log" \
-  "forge test --match-contract QuantumAccount_GasMicro_Test -vv 2>&1" \
-  "gas_validateUserOp:" \
-  "256.0" \
+  "forge test --match-test test_validateUserOp_gas_log -vv" \
+  "gas_validateUserOp" \
   "QuantumAccount: QuantumAccount.validateUserOp (account-level validation, no handleOps)"
 
-# 4) clean Falcon verify (LOG): gas_falcon_verify: N
-run_one_gas_logprefix \
+# 4) Falcon.verifySignature clean micro (log-reported verify-only gas)
+run_one_gas_logline \
   "falcon_verifySignature_log" \
-  "forge test --match-contract Falcon_GasMicro_Test -vv 2>&1" \
-  "gas_falcon_verify:" \
-  "256.0" \
+  "forge test --match-contract Falcon_GasMicro_Test --match-test test_falcon_verify_gas_log -vv" \
+  "gas_falcon_verify" \
   "QuantumAccount/Falcon: Falcon.verifySignature (clean verifySignature only)"
 
 popd >/dev/null
-
-tail -n 15 "${ROOT_DIR}/data/results.csv"
+echo "Wrote ${JSONL} and ${CSV}"
