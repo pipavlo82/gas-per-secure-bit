@@ -1,0 +1,17 @@
+{
+  "version": "pqsig-userop-v0.1",
+  "scheme": "mldsa65",
+  "chain_profile": "EVM/L1",
+  "user_op": {},
+  "pubkey": { "encoded": "0xdeadbeef" },
+  "signature": { "encoded": "0xcafebabe" },
+  "hashing": {
+    "message": "userOp_encoded",
+    "domain": "none",
+    "hash_fn": "keccak256",
+    "xof_wiring": "none"
+  },
+  "context": {
+    "notes": "Reject: user_op.encoded missing."
+  }
+}

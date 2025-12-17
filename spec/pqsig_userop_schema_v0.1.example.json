@@ -1,0 +1,24 @@
+{
+  "version": "pqsig-userop-v0.1",
+  "scheme": "mldsa65",
+  "chain_profile": "EVM/L1",
+  "user_op": {
+    "encoded": "0x01020304"
+  },
+  "pubkey": {
+    "encoded": "0xdeadbeef"
+  },
+  "signature": {
+    "encoded": "0xcafebabe"
+  },
+  "hashing": {
+    "message": "userOp_encoded",
+    "domain": "none",
+    "hash_fn": "keccak256",
+    "xof_wiring": "none"
+  },
+  "context": {
+    "bench_name": "example_only",
+    "notes": "Minimal example. Replace bytes with real data."
+  }
+}
