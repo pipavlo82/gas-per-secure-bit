@@ -1,75 +1,180 @@
 #!/usr/bin/env python3
-import json, sys, csv, datetime, subprocess
+# -*- coding: utf-8 -*-
 
-def git_commit():
+import csv
+import json
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+
+def root_dir() -> Path:
+    # scripts/parse_bench.py -> repo root
+    return Path(__file__).resolve().parents[1]
+
+
+def utc_ts() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def git_head(repo_path: Path) -> str:
     try:
-        return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+        return subprocess.check_output(
+            ["git", "-C", str(repo_path), "rev-parse", "HEAD"],
+            text=True
+        ).strip()
     except Exception:
         return "unknown"
 
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: parse_bench.py <jsonl_in_or_single_json>", file=sys.stderr)
-        sys.exit(1)
 
-    inp = sys.argv[1]
-    commit = git_commit()
-    ts = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00","Z")
-
-    # Accept either a path to a file, or a single JSON object string.
-    rows = []
-    try:
-        with open(inp, "r", encoding="utf-8") as f:
+def parse_input(arg: str) -> List[Dict[str, Any]]:
+    """
+    Accept either:
+      - a JSON string representing one object
+      - a path to a JSONL file (one JSON object per line)
+    """
+    p = Path(arg)
+    if p.exists() and p.is_file():
+        rows: List[Dict[str, Any]] = []
+        with p.open("r", encoding="utf-8") as f:
             for line in f:
-                line=line.strip()
+                line = line.strip()
                 if not line:
                     continue
                 rows.append(json.loads(line))
-    except FileNotFoundError:
-        rows.append(json.loads(inp))
+        return rows
 
-    # Normalize + compute
-    out = []
-    for r in rows:
-        gas = int(r["gas_verify"])
-        t = r["security_metric_type"]
-        v = float(r["security_metric_value"])
-        gp = gas / v if v != 0 else None
+    # Not a file => treat as single JSON object string
+    return [json.loads(arg)]
 
-        out.append({
-            "ts_utc": r.get("ts_utc", ts),
-            "repo": r.get("repo", "gas-per-secure-bit"),
-            "commit": r.get("commit", commit),
-            "scheme": r["scheme"],
-            "bench_name": r["bench_name"],
-            "chain_profile": r.get("chain_profile", "unknown"),
-            "gas_verify": gas,
-            "security_metric_type": t,
-            "security_metric_value": v,
-            "gas_per_secure_bit": gp,
-            "hash_profile": r.get("hash_profile", "unknown"),
-            "notes": r.get("notes", "")
-        })
 
-    # Append JSONL
-    with open("data/results.jsonl", "a", encoding="utf-8") as f:
-        for r in out:
-            f.write(json.dumps(r) + "\n")
+def get_any(d: Dict[str, Any], keys: List[str], default: Any = None) -> Any:
+    for k in keys:
+        if k in d and d[k] is not None:
+            return d[k]
+    return default
 
-    # Write CSV (full regen)
-    with open("data/results.jsonl", "r", encoding="utf-8") as f:
-        all_rows = [json.loads(line) for line in f if line.strip()]
 
-    fields = ["ts_utc","repo","commit","scheme","bench_name","chain_profile","gas_verify",
-              "security_metric_type","security_metric_value","gas_per_secure_bit","hash_profile","notes"]
+def normalize_row(raw: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, Any]:
+    # provenance (override-friendly)
+    repo = get_any(raw, ["repo"], defaults["repo"])
+    commit = get_any(raw, ["commit"], defaults["commit"])
 
-    with open("data/results.csv", "w", newline="", encoding="utf-8") as f:
+    scheme = get_any(raw, ["scheme"], None)
+    bench_name = get_any(raw, ["bench_name", "bench"], None)
+    if not scheme or not bench_name:
+        raise ValueError("Missing required fields: scheme and bench_name")
+
+    chain_profile = get_any(raw, ["chain_profile", "chain-profile"], "unknown")
+    gas_verify = int(get_any(raw, ["gas_verify", "gas"], 0))
+
+    sec_type = get_any(raw, ["security_metric_type", "security-type"], "unknown")
+    sec_val = float(get_any(raw, ["security_metric_value", "security-value"], 0.0))
+
+    # gas/bit (only meaningful if sec_val > 0)
+    gas_per_bit: Optional[float] = (gas_verify / sec_val) if sec_val > 0 else None
+
+    hash_profile = get_any(raw, ["hash_profile", "hash"], "unknown")
+    notes = get_any(raw, ["notes"], "")
+
+    ts = get_any(raw, ["ts_utc", "ts"], defaults["ts_utc"])
+
+    return {
+        "ts_utc": ts,
+        "repo": repo,
+        "commit": commit,
+        "scheme": scheme,
+        "bench_name": bench_name,
+        "chain_profile": chain_profile,
+        "gas_verify": gas_verify,
+        "security_metric_type": sec_type,
+        "security_metric_value": sec_val,
+        "gas_per_secure_bit": gas_per_bit,
+        "hash_profile": hash_profile,
+        "notes": notes,
+    }
+
+
+def ensure_results_files(root: Path) -> Tuple[Path, Path]:
+    data_dir = root / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    jsonl_path = data_dir / "results.jsonl"
+    csv_path = data_dir / "results.csv"
+    # Touch if missing (so append works even on a clean repo)
+    if not jsonl_path.exists():
+        jsonl_path.write_text("", encoding="utf-8")
+    if not csv_path.exists():
+        csv_path.write_text("", encoding="utf-8")
+    return jsonl_path, csv_path
+
+
+def regen_csv_from_jsonl(jsonl_path: Path, csv_path: Path) -> None:
+    rows: List[Dict[str, Any]] = []
+    with jsonl_path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            rows.append(json.loads(line))
+
+    fields = [
+        "ts_utc",
+        "repo",
+        "commit",
+        "scheme",
+        "bench_name",
+        "chain_profile",
+        "gas_verify",
+        "security_metric_type",
+        "security_metric_value",
+        "gas_per_secure_bit",
+        "hash_profile",
+        "notes",
+    ]
+
+    with csv_path.open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()
-        for r in all_rows:
-            w.writerow({k: r.get(k,"") for k in fields})
+        for r in rows:
+            w.writerow({k: r.get(k, "") for k in fields})
+
+
+def main() -> int:
+    if len(sys.argv) < 2:
+        print("Usage: parse_bench.py <json_string_or_jsonl_path>", file=sys.stderr)
+        return 1
+
+    root = root_dir()
+    defaults = {
+        "repo": root.name,                 # gas-per-secure-bit by default
+        "commit": git_head(root),          # HEAD of gas-per-secure-bit by default
+        "ts_utc": utc_ts(),
+    }
+
+    try:
+        raw_rows = parse_input(sys.argv[1])
+        normalized: List[Dict[str, Any]] = []
+        for r in raw_rows:
+            normalized.append(normalize_row(r, defaults))
+    except Exception as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return 2
+
+    jsonl_path, csv_path = ensure_results_files(root)
+
+    # Append JSONL
+    with jsonl_path.open("a", encoding="utf-8") as f:
+        for r in normalized:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+    # Full regen CSV from JSONL
+    regen_csv_from_jsonl(jsonl_path, csv_path)
 
     print("Wrote data/results.jsonl and data/results.csv")
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
