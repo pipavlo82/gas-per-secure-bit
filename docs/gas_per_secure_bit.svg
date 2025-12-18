@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="1100" viewBox="0 0 1400 700">
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="700" viewBox="0 0 1400 700">
   <!-- Background -->
   <rect x="0" y="0" width="100%" height="100%" fill="#ffffff"/>
   
   <!-- Title -->
   <text x="700" y="40" font-family="Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#1a1a1a">
-  Gas per 128-bit baseline (Lower is Better)
+    Gas per Actual Security Bit (Lower is Better)
   </text>
   <text x="700" y="70" font-family="Arial, sans-serif" font-size="16" text-anchor="middle" fill="#666">
     Post-Quantum Signature Verification on Ethereum/EVM
@@ -20,24 +20,27 @@
     <text x="-15" y="455" text-anchor="end" font-family="Arial, sans-serif" font-size="14" fill="#333">0</text>
     <line x1="-8" y1="450" x2="0" y2="450" stroke="#333" stroke-width="2"/>
     
-    <text x="-15" y="360" text-anchor="end" font-family="Arial, sans-serif" font-size="14" fill="#333">100K</text>
-    <line x1="-8" y1="356" x2="0" y2="356" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/>
+    <text x="-15" y="380" text-anchor="end" font-family="Arial, sans-serif" font-size="14" fill="#333">50K</text>
+    <line x1="-8" y1="376" x2="1200" y2="376" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/>
     
-    <text x="-15" y="265" text-anchor="end" font-family="Arial, sans-serif" font-size="14" fill="#333">200K</text>
-    <line x1="-8" y1="261" x2="0" y2="261" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/>
+    <text x="-15" y="305" text-anchor="end" font-family="Arial, sans-serif" font-size="14" fill="#333">100K</text>
+    <line x1="-8" y1="301" x2="1200" y2="301" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/>
     
-    <text x="-15" y="170" text-anchor="end" font-family="Arial, sans-serif" font-size="14" fill="#333">300K</text>
-    <line x1="-8" y1="166" x2="0" y2="166" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/>
+    <text x="-15" y="230" text-anchor="end" font-family="Arial, sans-serif" font-size="14" fill="#333">150K</text>
+    <line x1="-8" y1="226" x2="1200" y2="226" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/>
     
-    <text x="-15" y="75" text-anchor="end" font-family="Arial, sans-serif" font-size="14" fill="#333">400K</text>
-    <line x1="-8" y1="71" x2="0" y2="71" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/>
+    <text x="-15" y="155" text-anchor="end" font-family="Arial, sans-serif" font-size="14" fill="#333">200K</text>
+    <line x1="-8" y1="151" x2="1200" y2="151" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/>
     
-    <text x="-15" y="8" text-anchor="end" font-family="Arial, sans-serif" font-size="14" fill="#333">500K+</text>
-    <line x1="-8" y1="4" x2="0" y2="4" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/>
+    <text x="-15" y="80" text-anchor="end" font-family="Arial, sans-serif" font-size="14" fill="#333">250K</text>
+    <line x1="-8" y1="76" x2="1200" y2="76" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/>
+    
+    <text x="-15" y="8" text-anchor="end" font-family="Arial, sans-serif" font-size="14" fill="#333">300K+</text>
+    <line x1="-8" y1="4" x2="1200" y2="4" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/>
     
     <!-- Y-axis label -->
     <text x="-80" y="225" font-family="Arial, sans-serif" font-size="16" fill="#333" transform="rotate(-90 -80 225)">
-      Gas / Secure Bit
+      Gas / Actual Security Bit
     </text>
     
     <!-- Bars -->
@@ -45,57 +48,67 @@
     <rect x="50" y="449.7" width="80" height="0.3" fill="#94a3b8"/>
     <text x="90" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">ECDSA-1</text>
     <text x="90" y="440" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#333">165</text>
+    <text x="90" y="490" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">128-bit</text>
     
     <rect x="150" y="449.7" width="80" height="0.3" fill="#94a3b8"/>
     <text x="190" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">ECDSA-2</text>
     <text x="190" y="440" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#333">167</text>
+    <text x="190" y="490" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">128-bit</text>
     
     <rect x="250" y="449.5" width="80" height="0.5" fill="#94a3b8"/>
     <text x="290" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">ECDSA-3</text>
     <text x="290" y="440" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#333">188</text>
+    <text x="290" y="490" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">128-bit</text>
     
-    <!-- Falcon bars (PQ - blue) -->
+    <!-- Falcon getUserOp bar (PQ - blue) -->
     <rect x="370" y="449" width="80" height="1" fill="#60a5fa"/>
     <text x="410" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">FALCON</text>
     <text x="410" y="485" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#666">getUserOp</text>
     <text x="410" y="435" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#333">853</text>
+    <text x="410" y="505" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">256-bit</text>
     
     <!-- ML-DSA PreA bars (YOUR WORK - GREEN, highlighted!) -->
-    <rect x="480" y="438" width="80" height="12" fill="#10b981" stroke="#059669" stroke-width="2"/>
+    <rect x="480" y="444" width="80" height="6" fill="#10b981" stroke="#059669" stroke-width="2"/>
     <text x="520" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#059669">ML-DSA</text>
     <text x="520" y="485" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#059669">PreA rho0</text>
-    <text x="520" y="425" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#059669">11,714</text>
+    <text x="520" y="430" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#059669">7,809</text>
+    <text x="520" y="505" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#059669">192-bit</text>
     
-    <rect x="580" y="438" width="80" height="12" fill="#10b981" stroke="#059669" stroke-width="2"/>
+    <rect x="580" y="444" width="80" height="6" fill="#10b981" stroke="#059669" stroke-width="2"/>
     <text x="620" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#059669">ML-DSA</text>
     <text x="620" y="485" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#059669">PreA rho1</text>
-    <text x="620" y="425" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#059669">11,714</text>
+    <text x="620" y="430" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#059669">7,809</text>
+    <text x="620" y="505" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#059669">192-bit</text>
     
     <!-- Falcon full verify bars (PQ - blue) -->
-    <rect x="700" y="413" width="80" height="37" fill="#60a5fa"/>
+    <rect x="700" y="375" width="80" height="75" fill="#60a5fa"/>
     <text x="740" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">FALCON</text>
     <text x="740" y="485" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#666">verify</text>
-    <text x="740" y="400" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#333">40,375</text>
+    <text x="740" y="360" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#333">40,375</text>
+    <text x="740" y="505" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">256-bit</text>
     
-    <rect x="800" y="412" width="80" height="38" fill="#60a5fa"/>
+    <rect x="800" y="374" width="80" height="76" fill="#60a5fa"/>
     <text x="840" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">FALCON</text>
     <text x="840" y="485" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#666">validateOp</text>
-    <text x="840" y="398" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#333">41,364</text>
+    <text x="840" y="358" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#333">41,364</text>
+    <text x="840" y="505" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">256-bit</text>
     
-    <rect x="900" y="411" width="80" height="39" fill="#60a5fa"/>
+    <rect x="900" y="373" width="80" height="77" fill="#60a5fa"/>
     <text x="940" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">FALCON</text>
     <text x="940" y="485" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#666">handleOps</text>
-    <text x="940" y="397" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#333">42,836</text>
+    <text x="940" y="357" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#333">42,836</text>
+    <text x="940" y="505" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">256-bit</text>
     
     <!-- ML-DSA baseline bar (needs work - orange) -->
-    <rect x="1020" y="50" width="80" height="400" fill="#f97316"/>
+    <rect x="1020" y="150" width="80" height="300" fill="#f97316"/>
     <text x="1060" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">ML-DSA</text>
     <text x="1060" y="485" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#666">baseline</text>
-    <text x="1060" y="35" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#c2410c">538,294</text>
+    <text x="1060" y="135" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#c2410c">358,863</text>
+    <text x="1060" y="505" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">192-bit</text>
     
     <!-- Highlight box around PreA -->
-    <rect x="470" y="405" width="200" height="95" fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="8 4" rx="5"/>
-    <text x="570" y="515" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#059669">
+    <rect x="470" y="410" width="200" height="110" fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="8 4" rx="5"/>
+    <text x="570" y="530" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#059669">
       🏆 THIS WORK
     </text>
   </g>
@@ -107,13 +120,13 @@
     <!-- Classical (quantum-broken) -->
     <rect x="0" y="10" width="20" height="20" fill="#94a3b8"/>
     <text x="30" y="25" font-family="Arial, sans-serif" font-size="14" fill="#333">
-      Classical ECDSA (quantum-broken, 128-bit equivalent)
+      Classical ECDSA (quantum-broken, 128-bit security)
     </text>
     
     <!-- PQ Falcon -->
     <rect x="450" y="10" width="20" height="20" fill="#60a5fa"/>
     <text x="480" y="25" font-family="Arial, sans-serif" font-size="14" fill="#333">
-      Falcon-1024 (PQ, NIST Level 1, 128-bit security)
+      Falcon-1024 (PQ, NIST Level 5, 256-bit security)
     </text>
     
     <!-- PQ ML-DSA PreA (YOUR WORK) -->
@@ -136,10 +149,10 @@
       Key Achievement
     </text>
     <text x="10" y="45" font-family="Arial, sans-serif" font-size="13" fill="#333">
-      • PreA path: 11,714 gas/bit (3.4× cheaper than Falcon)
+      • PreA path: 7,809 gas/bit (5.2× more efficient than Falcon)
     </text>
     <text x="10" y="63" font-family="Arial, sans-serif" font-size="13" fill="#333">
-      • Higher security: 192-bit (L3) vs Falcon's 128-bit (L1)
+      • Security: 192-bit (L3) - balanced security/cost ratio
     </text>
     <text x="10" y="81" font-family="Arial, sans-serif" font-size="13" fill="#333">
       • FIPS-204 standardized, production-ready cryptography
