@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="800" viewBox="0 0 1400 800">
 <rect x="0" y="0" width="100%" height="100%" fill="white"/>
-<text x="700.0" y="35" font-size="24" text-anchor="middle" font-family="Arial">Gas per 128-bit baseline (lower is better) — EVM/L1 snapshots</text>
+<text x="700.0" y="35" font-size="24" text-anchor="middle" font-family="Arial">Gas per actual security bit (lower is better) — EVM/L1 snapshots</text>
 <line x1="110" y1="60" x2="110" y2="580" stroke="#111" stroke-width="2"/>
 <line x1="110" y1="580" x2="1360" y2="580" stroke="#111" stroke-width="2"/>
 <line x1="104" y1="580.0" x2="110" y2="580.0" stroke="#111" stroke-width="1"/>
@@ -16,32 +16,59 @@
 <line x1="104" y1="60.0" x2="110" y2="60.0" stroke="#111" stroke-width="1"/>
 <text x="100" y="65.0" font-size="14" text-anchor="end" font-family="Arial">592,123</text>
 <text x="28" y="320.0" font-size="16" text-anchor="middle" font-family="Arial" transform="rotate(-90 28 320.0)">gas/secure-bit</text>
-<rect x="110.0" y="579.8550565643712" width="122.88888888888889" height="0.1449434356287611" fill="#4C8BF5"/>
+
+<!-- ECDSA bars (unchanged - 128-bit) -->
+<rect x="110.0" y="579.8550565643712" width="122.88888888888889" height="0.1449434356287611" fill="#94a3b8"/>
 <text x="171.44444444444446" y="571.8550565643712" font-size="16" text-anchor="middle" font-family="Arial">165.0</text>
 <text x="171.44444444444446" y="598" font-size="14" text-anchor="end" font-family="Arial" transform="rotate(-45 171.44444444444446 598)">ECDSA ecrecover</text>
-<rect x="250.88888888888889" y="579.8351187804114" width="122.88888888888889" height="0.16488121958855118" fill="#4C8BF5"/>
+<text x="171.44444444444446" y="612" font-size="11" text-anchor="end" font-family="Arial" fill="#666" transform="rotate(-45 171.44444444444446 612)">(128-bit)</text>
+
+<rect x="250.88888888888889" y="579.8351187804114" width="122.88888888888889" height="0.16488121958855118" fill="#94a3b8"/>
 <text x="312.3333333333333" y="571.8351187804114" font-size="16" text-anchor="middle" font-family="Arial">187.8</text>
 <text x="312.3333333333333" y="598" font-size="14" text-anchor="end" font-family="Arial" transform="rotate(-45 312.3333333333333 598)">ECDSA bytes65</text>
-<rect x="391.77777777777777" y="579.853087485226" width="122.88888888888889" height="0.1469125147740442" fill="#4C8BF5"/>
+<text x="312.3333333333333" y="612" font-size="11" text-anchor="end" font-family="Arial" fill="#666" transform="rotate(-45 312.3333333333333 612)">(128-bit)</text>
+
+<rect x="391.77777777777777" y="579.853087485226" width="122.88888888888889" height="0.1469125147740442" fill="#94a3b8"/>
 <text x="453.22222222222223" y="571.853087485226" font-size="16" text-anchor="middle" font-family="Arial">167.3</text>
 <text x="453.22222222222223" y="598" font-size="14" text-anchor="end" font-family="Arial" transform="rotate(-45 453.22222222222223 598)">ECDSA ERC-1271</text>
-<rect x="532.6666666666666" y="544.5426649023168" width="122.88888888888889" height="35.4573350976832" fill="#4C8BF5"/>
+<text x="453.22222222222223" y="612" font-size="11" text-anchor="end" font-family="Arial" fill="#666" transform="rotate(-45 453.22222222222223 612)">(128-bit)</text>
+
+<!-- Falcon bars (unchanged - already using 256-bit) -->
+<rect x="532.6666666666666" y="544.5426649023168" width="122.88888888888889" height="35.4573350976832" fill="#60a5fa"/>
 <text x="594.1111111111111" y="536.5426649023168" font-size="16" text-anchor="middle" font-family="Arial">40,375</text>
 <text x="594.1111111111111" y="598" font-size="14" text-anchor="end" font-family="Arial" transform="rotate(-45 594.1111111111111 598)">Falcon verify</text>
-<rect x="673.5555555555555" y="579.2510192385894" width="122.88888888888889" height="0.7489807614106212" fill="#4C8BF5"/>
+<text x="594.1111111111111" y="612" font-size="11" text-anchor="end" font-family="Arial" fill="#666" transform="rotate(-45 594.1111111111111 612)">(256-bit)</text>
+
+<rect x="673.5555555555555" y="579.2510192385894" width="122.88888888888889" height="0.7489807614106212" fill="#60a5fa"/>
 <text x="735.0" y="571.2510192385894" font-size="16" text-anchor="middle" font-family="Arial">852.9</text>
 <text x="735.0" y="598" font-size="14" text-anchor="end" font-family="Arial" transform="rotate(-45 735.0 598)">Falcon QA: getUserOpHash</text>
-<rect x="814.4444444444445" y="543.6744965349353" width="122.88888888888889" height="36.325503465064685" fill="#4C8BF5"/>
+<text x="735.0" y="612" font-size="11" text-anchor="end" font-family="Arial" fill="#666" transform="rotate(-45 735.0 612)">(256-bit)</text>
+
+<rect x="814.4444444444445" y="543.6744965349353" width="122.88888888888889" height="36.325503465064685" fill="#60a5fa"/>
 <text x="875.8888888888889" y="535.6744965349353" font-size="16" text-anchor="middle" font-family="Arial">41,364</text>
 <text x="875.8888888888889" y="598" font-size="14" text-anchor="end" font-family="Arial" transform="rotate(-45 875.8888888888889 598)">Falcon QA: validateUserOp</text>
-<rect x="955.3333333333333" y="542.3814084349725" width="122.88888888888889" height="37.61859156502749" fill="#4C8BF5"/>
+<text x="875.8888888888889" y="612" font-size="11" text-anchor="end" font-family="Arial" fill="#666" transform="rotate(-45 875.8888888888889 612)">(256-bit)</text>
+
+<rect x="955.3333333333333" y="542.3814084349725" width="122.88888888888889" height="37.61859156502749" fill="#60a5fa"/>
 <text x="1016.7777777777777" y="534.3814084349725" font-size="16" text-anchor="middle" font-family="Arial">42,836</text>
 <text x="1016.7777777777777" y="598" font-size="14" text-anchor="end" font-family="Arial" transform="rotate(-45 1016.7777777777777 598)">Falcon QA: handleOps</text>
-<rect x="1096.2222222222222" y="569.7130777249054" width="122.88888888888889" height="10.28692227509464" fill="#4C8BF5"/>
-<text x="1157.6666666666665" y="561.7130777249054" font-size="16" text-anchor="middle" font-family="Arial">11,714</text>
-<text x="1157.6666666666665" y="598" font-size="14" text-anchor="end" font-family="Arial" transform="rotate(-45 1157.6666666666665 598)">ML-DSA-65 PreA (packedA→w)</text>
-<rect x="1237.111111111111" y="107.27272727272728" width="122.88888888888889" height="472.72727272727275" fill="#4C8BF5"/>
-<text x="1298.5555555555554" y="99.27272727272728" font-size="16" text-anchor="middle" font-family="Arial">538,294</text>
+<text x="1016.7777777777777" y="612" font-size="11" text-anchor="end" font-family="Arial" fill="#666" transform="rotate(-45 1016.7777777777777 612)">(256-bit)</text>
+
+<!-- ML-DSA bars (UPDATED - now using 192-bit) -->
+<!-- PreA: 7,809 (was 11,714) -->
+<!-- Height calculation: 7,809 / 592,123 * 520 = 6.857 pixels -->
+<rect x="1096.2222222222222" y="573.143" width="122.88888888888889" height="6.857" fill="#10b981"/>
+<text x="1157.6666666666665" y="565.143" font-size="16" text-anchor="middle" font-family="Arial" fill="#059669" font-weight="bold">7,809</text>
+<text x="1157.6666666666665" y="598" font-size="14" text-anchor="end" font-family="Arial" fill="#059669" font-weight="bold" transform="rotate(-45 1157.6666666666665 598)">ML-DSA-65 PreA (packedA→w)</text>
+<text x="1157.6666666666665" y="612" font-size="11" text-anchor="end" font-family="Arial" fill="#059669" font-weight="bold" transform="rotate(-45 1157.6666666666665 612)">(192-bit) 🏆</text>
+
+<!-- Baseline: 358,863 (was 538,294) -->
+<!-- Height calculation: 358,863 / 592,123 * 520 = 315.15 pixels -->
+<rect x="1237.111111111111" y="264.85" width="122.88888888888889" height="315.15" fill="#f97316"/>
+<text x="1298.5555555555554" y="256.85" font-size="16" text-anchor="middle" font-family="Arial">358,863</text>
 <text x="1298.5555555555554" y="598" font-size="14" text-anchor="end" font-family="Arial" transform="rotate(-45 1298.5555555555554 598)">ML-DSA-65 verify() POC</text>
-<text x="110" y="770" font-size="14" font-family="Arial">Note: single-run gas snapshots; see data/results.csv for provenance.</text>
+<text x="1298.5555555555554" y="612" font-size="11" text-anchor="end" font-family="Arial" fill="#666" transform="rotate(-45 1298.5555555555554 612)">(192-bit)</text>
+
+<text x="110" y="750" font-size="14" font-family="Arial">Note: Gas divided by actual security bits (NIST levels: ECDSA=128, ML-DSA-65=192, Falcon=256)</text>
+<text x="110" y="770" font-size="14" font-family="Arial">Single-run gas snapshots; see data/results.csv for provenance.</text>
 </svg>
