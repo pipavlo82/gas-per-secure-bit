@@ -68,6 +68,7 @@ This repo focuses on a normalized unit: **gas / secure-bit**, with explicit assu
 | **Falcon**    | qa_handleOps_userop_foundry               | 10,966,076  | 256                 | 42,836.234       |
 | **ML-DSA-65** | verify_poc_foundry                        | 68,901,612  | 192                 | 358,862.563      |
 
+
 **Notes:**
 - `qa_handleOps_userop_foundry` includes the full EIP-4337 pipeline (`EntryPoint.handleOps`), so it is **not** a “pure signature verify” cost.
 - `falcon_verifySignature_log` is a **clean verifySignature-only** microbench extracted from QuantumAccount logs.
