@@ -1,85 +1,114 @@
-# Gas per secure bit — grant-oriented spec (plain language, v0)
+# Gas per Secure Bit — Grant-Oriented Spec (Plain Language, v0)
 
-This document is the “hardened” explanation of the metric for reviewers.
-It is separate from `spec/gas_per_secure_bit.md` (the more detailed / discussion-oriented spec).
+> **Note:** This document is the "hardened" explanation of the metric for reviewers. It is separate from `spec/gas_per_secure_bit.md` (the more detailed / discussion-oriented spec).
 
 ---
 
 ## TL;DR
 
-We compare EVM verification cost normalized by effective security:
+We compare EVM verification cost normalized by an explicit security target:
 
-**gas_per_secure_bit = gas_verify / security_bits**
+```
+gas_per_secure_bit = gas_verify / security_equiv_bits
+```
 
-Today, for signatures, `security_bits` is recorded as `lambda_eff` (effective security level in bits).
-Later, for VRF/randomness, `security_bits` becomes `H_min` (min-entropy of the verified output).
+Where `security_equiv_bits` is a declared "classical-equivalent bits" convention for fair normalization.
 
----
+Later, for VRF/randomness, `security_equiv_bits` can be replaced by `H_min` (min-entropy) under an explicit threat model:
 
-## What the metric means
-
-- `gas_verify`: gas used on-chain for a clearly-defined verification step (signature/proof/verified computation)
-- `security_bits`:
-  - **signatures**: `lambda_eff` (effective security bits; declared explicitly)
-  - **VRF/randomness (future)**: `H_min` under an explicit threat model
-
-This normalization avoids misleading comparisons that only show “gas per verify” while mixing different security levels.
+```
+gas_per_entropy_bit = gas_verify / H_min
+```
 
 ---
 
-## What MUST be reported with every result (reproducibility)
+## What the Metric Means
+
+**`gas_verify`:** Gas used on-chain for a clearly-defined verification step (signature/proof/verified computation).
+
+**`security_equiv_bits`:** For signatures, a declared "classical-equivalent bits" value used for normalization (e.g., 128 / 192 / 256). For VRF/randomness (future), use `H_min` under an explicit threat model.
+
+**Why this matters:** This avoids misleading comparisons that only show "gas per verify" while mixing different security levels.
+
+---
+
+## What MUST Be Reported with Every Result (Reproducibility)
 
 Each dataset row should include:
 
-- `repo`, `commit` (provenance of the implementation)
-- `scheme`, `bench_name`
-- `chain_profile` (EVM/L1 now; extendable to L2 profiles)
-- `gas_verify`
-- `security_metric_type` and `security_metric_value`
-  - currently: `security_metric_type = lambda_eff`
-- `notes` (what exactly is measured; what is included/excluded)
+- **`repo`, `commit`:** Provenance of the implementation
+- **`scheme`, `bench_name`:** What is being measured
+- **`chain_profile`:** EVM/L1 now; extendable to L2 profiles
+- **`gas_verify`:** Gas cost measurement
+- **`security_metric_type` and `security_metric_value`:**
+  - Recommended for signatures: `security_metric_type = security_equiv_bits`
+  - Recommended for randomness: `security_metric_type = H_min`
+- **`notes`:** What exactly is measured; what is included/excluded
 
 ---
 
-## Current working convention for `lambda_eff` (explicit assumptions)
+## Security Reporting for Signatures (Explicit Assumptions)
 
-This repo treats `lambda_eff` as a declared field.
-Current dataset uses a simple convention for benchmarking:
+This repo separates two ideas:
 
-- **ECDSA (secp256k1)**: `lambda_eff = 128` (classical security)
-- **ML-DSA-65 (FIPS-204 / Dilithium-III shape)**: `lambda_eff = 128` (post-quantum target category)
-- **Falcon-1024**: `lambda_eff = 256` (post-quantum target category)
+1. **Security category:** NIST PQ categories, where applicable (1 / 3 / 5)
+2. **Security-equivalent bits:** Used for normalization (`security_equiv_bits`)
 
-These numbers can be revised, but the key rule is: the dataset must state them explicitly.
+### Current Working Convention (Signatures)
+
+The dataset must declare `security_equiv_bits` explicitly. A reasonable default convention is:
+
+| Scheme | Security Category | `security_equiv_bits` | Notes |
+|--------|-------------------|----------------------|-------|
+| **ECDSA (secp256k1)** | - | 128 | Classical security convention |
+| **ML-DSA-65 (FIPS-204)** | 3 | 192 | Classical-equivalent convention |
+| **Falcon-1024** | 5 | 256 | Classical-equivalent convention |
+
+**Note:** These "equivalent bits" are a normalization convention, not a proof statement. The key rule is that they are explicit and consistent across comparisons.
 
 ---
 
-## What is NOT “pure verify” (avoid bad comparisons)
+## Optional Baseline Normalization (Separate Metric)
+
+If we want a simple baseline comparison (e.g., "per 128-bit baseline"), we compute:
+
+```
+gas_per_128b = gas_verify / 128
+```
+
+**Important:** This is not a claim that ML-DSA-65 is "128-bit secure"; it is a baseline normalization only.
+
+---
+
+## What is NOT "Pure Verify" (Avoid Bad Comparisons)
 
 Some benches measure full pipelines, not a single signature verification.
-Example: EIP-4337 `EntryPoint.handleOps` includes multiple checks and execution overhead.
 
-Rule:
-- mark such benches in `notes`
-- do not compare them as if they are standalone signature verification
+**Example:** EIP-4337 `EntryPoint.handleOps` includes multiple checks and execution overhead.
+
+**Rule:** Mark such benches in `notes`; do not compare them as if they are standalone signature verification.
 
 ---
 
-## Snapshot vs statistics
+## Snapshot vs Statistics
 
-Current results are **snapshot-based** (single-run measurements).
+**Current results are snapshot-based** (single-run measurements).
+
 If we add repeated runs, we should report:
+
 - `n`, `min/median/max` (or percentile stats)
-- environment notes (Foundry version, EVM config)
-- optional error bars in plots
+- Environment notes (Foundry version, EVM config)
+- Optional error bars in plots
 
 ---
 
-## Why this matters (grant framing)
+## Why This Matters (Grant Framing)
 
 This project provides:
-1) a normalized cost metric (gas per security bit),
-2) reproducible datasets with provenance,
-3) a benchmark lab to compare PQ signature candidates and VRF-style constructions on EVM.
+
+1. **A normalized cost metric** (`gas per security bit` / `gas per entropy bit`)
+2. **Reproducible datasets** with provenance
+3. **A benchmark lab** to compare PQ signature candidates and VRF-style constructions on EVM
 
 It is intended to evolve into a shared methodology others can reuse.
+
