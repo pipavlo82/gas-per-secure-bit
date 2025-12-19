@@ -126,3 +126,6 @@ and declare:
 - `attestation_surface`
 
 This allows datasets to compare *attested entropy surfaces* using the same normalization concept as signatures.
+
+## Protocol readiness report
+See `reports/protocol_readiness.md` for a dataset-backed summary of weakest-link surfaces (envelope dominance + entropy/attestation vNext).
