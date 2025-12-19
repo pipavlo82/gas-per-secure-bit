@@ -264,4 +264,29 @@ See `LICENSE` (and vendor repo licenses where applicable). This repo records ben
 
 This is an experimental benchmarking lab. Results are not a security proof. Use the data as comparative engineering evidence under explicitly stated assumptions.
 
-Maintained by Pavlo Tvardovskyi 
+## Maintainer
+
+Maintained by **Pavlo Tvardovskyi** (GitHub: [@pipavlo82](https://github.com/pipavlo82))  
+Contact: <shtomko@gmail.com>
+
+## Citation
+
+If you use this repository (methodology, dataset schema, runners, or benchmarks) in research or production evaluation,
+please cite it as:
+
+> Pavlo Tvardovskyi, *gas-per-secure-bit* (GitHub repository), YYYY.  
+> https://github.com/pipavlo82/gas-per-secure-bit
+
+For reproducibility, cite a **tag** or **commit hash**.
+
+## Provenance
+
+This repository is authored and maintained by Pavlo Tvardovskyi.
+It aggregates benchmark artifacts and provenance for multiple upstream/vendor implementations;
+each upstream project remains under its own license (see vendor repos and LICENSE).
+
+## Support / Consulting
+
+If you need help integrating this methodology, adding new schemes, or producing vendor-grade benchmark reports,
+contact: <shtomko@gmail.com>.
+
