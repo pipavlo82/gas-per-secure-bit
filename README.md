@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="./docs/formula.png" alt="Gas per secure bit formula" width="320"/>
+
 
 **Benchmarking post-quantum signatures and verifiable randomness by gas cost per cryptographically meaningful bit.**
 
