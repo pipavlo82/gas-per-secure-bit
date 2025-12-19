@@ -13,13 +13,14 @@ Generated artifacts in this repo:
 
 - We now have a **reproducible PQ-on-EVM benchmark lab** with **explicit provenance** (`repo`, `commit`) and **explicit security denominators**.
 - We added a **weakest-link composition model** for AA / protocol pipelines: if your AA wallet uses a PQ signature, the **effective security can still be capped by the L1 envelope** until the protocol de-enshrines ECDSA-style assumptions.
-- We also started modeling **entropy + attestation surfaces** as first-class benchmark nodes (vNext fields), so we can extend from “signatures” to “protocol readiness” and eventually VRF / randomness.
+- We also started modeling **entropy + attestation surfaces** as first-class benchmark nodes (vNext fields), so we can extend from "signatures" to "protocol readiness" and eventually VRF / randomness.
 
 ---
 
-## What we have (as of current main)
+## What We Have (as of current main)
 
 ### 1) Dataset + normalization (core)
+
 **Metric:**
 - `gas_per_secure_bit = gas_verify / security_metric_value`
 
@@ -40,6 +41,7 @@ For VRF / randomness (vNext direction):
 ---
 
 ### 2) Weakest-link composition (AA / protocol envelope dominance)
+
 We introduced a dataset-backed composition rule:
 
 - A pipeline record can declare `depends_on: [ "scheme::bench", ... ]`
@@ -61,6 +63,7 @@ Both show **declared 256-bit** (Falcon) becoming **effective 128-bit** when the 
 ---
 
 ### 3) Entropy + attestation surfaces (vNext fields)
+
 We extended the schema (optional fields) to start tracking:
 - `surface_class` (e.g., signature-only microbench vs AA validation vs full pipeline vs envelope)
 - `security_model` (e.g., `raw` vs `weakest_link`)
@@ -73,14 +76,15 @@ We extended the schema (optional fields) to start tracking:
 ---
 
 ### 4) Protocol readiness summary
-We consolidated the above into a readable “protocol readiness” view:
+
+We consolidated the above into a readable "protocol readiness" view:
 - `reports/protocol_readiness.md`
 
 This is *not* a new benchmark; it is a structured summary of what the dataset + weakest-link model implies about end-to-end PQ readiness.
 
 ---
 
-## Current dataset coverage (high level)
+## Current Dataset Coverage (high level)
 
 ### Schemes included
 - **ECDSA (secp256k1)**: `ecrecover`, bytes65 wrapper, ERC-1271 `isValidSignature`
@@ -92,113 +96,103 @@ This is *not* a new benchmark; it is a structured summary of what the dataset + 
 - Contract wallet verify (ERC-1271)
 - AA validation surfaces (validateUserOp-like)
 - AA end-to-end path (handleOps)
-- Baseline “envelope assumption” node (for weakest-link composition)
+- Baseline "envelope assumption" node (for weakest-link composition)
 
 ---
 
-## How to reproduce reports
+## How to Reproduce Reports
 
 From repo root:
 
 ```bash
 ./scripts/make_reports.sh
+```
+
 This performs:
 
-JSONL sanity (one JSON per line)
+- JSONL sanity (one JSON per line)
+- Uniqueness sanity for (scheme, bench_name, repo, commit)
+- Regenerates:
+  - `reports/weakest_link_report.md`
+  - (protocol report is currently a static markdown file)
 
-Uniqueness sanity for (scheme, bench_name, repo, commit)
+---
 
-Regenerates:
+## Key Takeaways (what is actually new here)
 
-reports/weakest_link_report.md
+### Comparability
 
-(protocol report is currently a static markdown file)
-
-Key takeaways (what is actually new here)
-Comparability
-
-“Gas per verify” comparisons are often invalid across different security levels and different surfaces.
+"Gas per verify" comparisons are often invalid across different security levels and different surfaces.
 
 We force comparability by explicitly recording:
+- security denominator,
+- surface class,
+- and scope (microbench vs pipeline).
 
-security denominator,
-
-surface class,
-
-and scope (microbench vs pipeline).
-
-Composition
+### Composition
 
 PQ wallet signatures in AA do not automatically make the system PQ-ready.
 
 End-to-end security is capped by the weakest dependency in the execution path (envelope/attestation/entropy).
 
-Standardization direction
+### Standardization direction
 
 With a canonical dataset schema + runners + composition model, the community can converge on:
+- shared benchmark surfaces,
+- shared denominators / threat models,
+- and eventually shared ABI interfaces (e.g., ERC-7913-style adapters) for real "apples-to-apples".
 
-shared benchmark surfaces,
+---
 
-shared denominators / threat models,
+## Next Steps (A / B / C)
 
-and eventually shared ABI interfaces (e.g., ERC-7913-style adapters) for real “apples-to-apples”.
+### A) Make protocol readiness fully generated (no manual steps)
 
-Next steps (A / B / C)
-A) Make protocol readiness fully generated (no manual steps)
-Add scripts/report_protocol_readiness.py that:
+Add `scripts/report_protocol_readiness.py` that:
+- reads `data/results.jsonl`,
+- groups by `surface_class`,
+- emits a short readiness table:
+  - "what limits effective security today"
+  - "which assumptions must change for PQ end-to-end"
 
-reads data/results.jsonl,
+Wire it into `scripts/make_reports.sh`.
 
-groups by surface_class,
+### B) Add at least one Dilithium / ML-DSA alternative surface
 
-emits a short readiness table:
-
-“what limits effective security today”
-
-“which assumptions must change for PQ end-to-end”
-
-Wire it into scripts/make_reports.sh.
-
-B) Add at least one Dilithium / ML-DSA alternative surface
 Either:
+- ZKNoxHQ ETHDILITHIUM benches, or
+- another independent implementation with clean verify microbench.
 
-ZKNoxHQ ETHDILITHIUM benches, or
+Goal: broaden dataset beyond Falcon + ML-DSA and reduce "single-vendor bias".
 
-another independent implementation with clean verify microbench.
+### C) Start VRF/randomness track (schema already ready)
 
-Goal: broaden dataset beyond Falcon + ML-DSA and reduce “single-vendor bias”.
-
-C) Start VRF/randomness track (schema already ready)
-Add first “entropy/VRF” benchmark rows under:
-
-security_metric_type = H_min
-
-explicit threat model field in notes
+Add first "entropy/VRF" benchmark rows under:
+- `security_metric_type = H_min`
+- explicit threat model field in notes
 
 Even if early rows are partial (microbenches), this establishes the denominator discipline for randomness.
 
-Where to look (files)
-Dataset: data/results.jsonl, data/results.csv
+---
 
-Schema: spec/pqsig_userop_schema_v0.1.md
+## Where to Look (files)
 
-Methodology: spec/gas_per_secure_bit_for_grants.md (methodology hardening doc; despite filename, content is engineering-methodology)
+- **Dataset:** `data/results.jsonl`, `data/results.csv`
+- **Schema:** `spec/pqsig_userop_schema_v0.1.md`
+- **Methodology:** `spec/gas_per_secure_bit_for_grants.md` (methodology hardening doc; despite filename, content is engineering-methodology)
+- **Weakest-link report:** `reports/weakest_link_report.md`
+- **Entropy/attestation notes:** `reports/entropy_surface_notes.md`
+- **Protocol readiness summary:** `reports/protocol_readiness.md`
 
-Weakest-link report: reports/weakest_link_report.md
+---
 
-Entropy/attestation notes: reports/entropy_surface_notes.md
+## Contribution Requests (practical)
 
-Protocol readiness summary: reports/protocol_readiness.md
+- Add new scheme benches with:
+  - explicit `bench_name`,
+  - `repo`, `commit`,
+  - and a clear `surface_class`.
 
-Contribution requests (practical)
-Add new scheme benches with:
+- Add new `depends_on` edges for real AA pipelines so weakest-link is computed from actual dependency graphs, not just baseline examples.
 
-explicit bench_name,
-
-repo, commit,
-
-and a clear surface_class.
-
-Add new “depends_on” edges for real AA pipelines so weakest-link is computed from actual dependency graphs, not just baseline examples.
-
-Propose improved normalization conventions for security_equiv_bits (keep explicit; avoid implicit claims).
+- Propose improved normalization conventions for `security_equiv_bits` (keep explicit; avoid implicit claims).
