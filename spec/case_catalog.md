@@ -27,3 +27,6 @@ For pipelines with dependencies, define:
 - security_model = weakest_link
 - depends_on = [ ... ]
 and compute effective_security_bits = min(security-equivalent bits over the dependency set).
+
+## Pipelines / graphs
+A “pipeline” is a named dependency graph (see `spec/case_graph.md`) that defines how records compose into an end-to-end security assumption set.
