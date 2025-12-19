@@ -263,3 +263,5 @@ See `LICENSE` (and vendor repo licenses where applicable). This repo records ben
 ## Disclaimer
 
 This is an experimental benchmarking lab. Results are not a security proof. Use the data as comparative engineering evidence under explicitly stated assumptions.
+
+Maintained by Pavlo Tvardovskyi 
