@@ -104,3 +104,24 @@ These fields are OPTIONAL. Existing records remain valid without them.
   - commit: string (upstream git commit hash)
   - path: string (optional)
   - toolchain: string (optional)
+
+## Optional vNext fields: entropy / attestation surfaces (backward-compatible)
+
+These fields enable benchmarking beyond signature verification by capturing entropy and attestation assumptions.
+
+### `security_metric_type` extensions
+- `H_min` — min-entropy in bits under a declared threat model (for randomness / VRF / entropy sources).
+
+### New optional fields
+- `surface_class` (string)
+  - Examples: `Entropy_attestation`, `Hash_commitment`, `L2_attestation`, `Sequencing`.
+- `threat_model` (string)
+  - Short identifier for the assumed adversary model (e.g., `pq_adversary_full`, `classical_adversary`, `trusted_hardware`).
+- `entropy_source` (string)
+  - Examples: `randao_hash`, `vrf_pq`, `tee_attested_rng`, `external_oracle`.
+- `attestation_surface` (string)
+  - Examples: `l1_envelope`, `bundler_tx`, `l2_batch_proof`, `tee_quote`, `committee_signature`.
+- `security_model` (string)
+  - `raw` | `weakest_link` | `composed`
+- `depends_on` (array of strings)
+  - List of `scheme::bench_name` record identifiers that define a dependency graph for weakest-link calculations.

@@ -112,3 +112,17 @@ This project provides:
 
 It is intended to evolve into a shared methodology others can reuse.
 
+
+## Entropy / VRF (vNext)
+
+For entropy and VRF benchmarks, use:
+
+- `security_metric_type = H_min`
+- `security_metric_value = <min-entropy bits>`
+
+and declare:
+- `threat_model`
+- `entropy_source`
+- `attestation_surface`
+
+This allows datasets to compare *attested entropy surfaces* using the same normalization concept as signatures.
