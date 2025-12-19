@@ -65,6 +65,23 @@ This repo focuses on:
 - **normalized units** (gas per declared security-equivalent bit), and
 - **protocol-aware interpretation** (weakest-link / envelope dominance).
 
+This is designed to compare not only **gas**, but also **what actually bounds security in protocol-aligned paths** (envelopes, attestations, entropy dependencies).
+
+---
+
+## New: Weakest-link + Protocol Readiness Surfaces
+
+Besides single-bench gas numbers, this repo also models **end-to-end PQ readiness** of real execution paths.
+
+- **Weakest-link security:** for a pipeline record with `depends_on`, the effective security is the minimum across dependencies.
+  - Example: AA/UserOp paths can be PQ at the wallet layer but still be bounded by the **L1 envelope** assumption.
+- **Entropy / attestation surfaces (vNext):** schema supports labeling entropy sources and attestation dependencies to make protocol readiness explicit.
+
+Reports:
+- `reports/weakest_link_report.md`
+- `reports/protocol_readiness.md`
+- `reports/entropy_surface_notes.md`
+
 ---
 
 ## Chart
@@ -176,6 +193,10 @@ Columns:
 - `hash_profile` — e.g., `keccak256` or `unknown`
 - `notes` — context + refs (runner, branch, extraction method)
 
+Additional (optional) fields used for composed pipelines:
+- `security_model` — e.g. `raw` or `weakest_link`
+- `depends_on` — list of dependency record keys (`scheme::bench_name`) used to compute effective security
+
 Right now (signature dataset) we primarily use:
 - `security_metric_type = security_equiv_bits`
 - `security_metric_value ∈ {128.0, 192.0, 256.0}`
@@ -259,6 +280,13 @@ rows.sort(key=lambda r: float(r["gas_per_secure_bit"]))
 for r in rows:
     print(f'{r["scheme"]:10s} {r["bench_name"]:38s} gas={int(r["gas_verify"]):>9,d}  gas/bit={float(r["gas_per_secure_bit"]):>12,.3f}')
 PY
+```
+
+### Generate Reports
+
+```bash
+./scripts/make_reports.sh
+ls -la reports/
 ```
 
 ---
