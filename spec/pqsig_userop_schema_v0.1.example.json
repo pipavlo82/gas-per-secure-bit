@@ -1,22 +1,38 @@
 {
   "version": "pqsig-userop-v0.1",
+  "schema_version": "0.2",
+
   "scheme": "mldsa65",
   "chain_profile": "EVM/L1",
+
+  "surface_class": "AA_userop_auth",
+  "security_model": "weakest_link",
+  "depends_on": ["l1_envelope_ecdsa_128"],
+  "provenance": {
+    "repo": "vendor/quantumaccount",
+    "commit": "PUT_REAL_COMMIT_HERE",
+    "path": "vendor/quantumaccount"
+  },
+
   "user_op": {
     "encoded": "0x01020304"
   },
+
   "pubkey": {
     "encoded": "0xdeadbeef"
   },
+
   "signature": {
     "encoded": "0xcafebabe"
   },
+
   "hashing": {
     "message": "userOp_encoded",
     "domain": "none",
     "hash_fn": "keccak256",
     "xof_wiring": "none"
   },
+
   "context": {
     "bench_name": "example_only",
     "notes": "Minimal example. Replace bytes with real data."
