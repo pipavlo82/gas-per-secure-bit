@@ -59,13 +59,8 @@ def get_any(d: Dict[str, Any], keys: List[str], default: Any = None) -> Any:
 
 def provenance_override(raw: Dict[str, Any]) -> Tuple[Optional[str], Optional[str], Optional[str]]:
     """
-    Backward-compatible upstream provenance override.
-
-    If raw contains:
+    Optional upstream provenance override:
       "provenance": {"repo": "...", "commit": "...", "path": "..."}
-    then we prefer those for the record's repo/commit provenance.
-
-    Returns (repo, commit, path) or (None, None, None).
     """
     prov = raw.get("provenance")
     if not isinstance(prov, dict):
@@ -100,13 +95,15 @@ def normalize_row(raw: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, An
     if p_commit:
         commit = p_commit
 
+    # Required-ish fields
     scheme = get_any(raw, ["scheme"], None)
     if not scheme and isinstance(raw.get("context"), dict):
         scheme = get_any(raw["context"], ["scheme"], None)
+
     bench_name = get_any(raw, ["bench_name", "bench"], None)
-# Allow userop-shaped inputs where bench_name lives under context.*
     if not bench_name and isinstance(raw.get("context"), dict):
         bench_name = get_any(raw["context"], ["bench_name", "bench"], None)
+
     if not scheme or not bench_name:
         raise ValueError("Missing required fields: scheme and bench_name")
 
@@ -140,11 +137,23 @@ def normalize_row(raw: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, An
     }
 
     # Only attach nested provenance object if the input explicitly provided it
-    # (keeps legacy rows smaller and avoids schema churn).
     if p_repo or p_commit or p_path:
         out["provenance"] = {"repo": repo, "commit": commit}
         if p_path:
             out["provenance"]["path"] = p_path
+
+    # Pass-through optional vNext fields (for reports / weakest-link analysis)
+    surface_class = raw.get("surface_class")
+    if isinstance(surface_class, str) and surface_class:
+        out["surface_class"] = surface_class
+
+    security_model = raw.get("security_model")
+    if isinstance(security_model, str) and security_model:
+        out["security_model"] = security_model
+
+    depends_on = raw.get("depends_on")
+    if isinstance(depends_on, list) and depends_on:
+        out["depends_on"] = [str(x) for x in depends_on]
 
     return out
 
@@ -231,4 +240,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
