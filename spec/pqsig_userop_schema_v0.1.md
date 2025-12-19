@@ -82,3 +82,25 @@ Notes:
 
 ## Status
 Draft v0.1. Expected to evolve once multiple implementations consume it.
+
+## Optional fields (vNext, backward-compatible)
+
+These fields are OPTIONAL. Existing records remain valid without them.
+
+- schema_version: string (e.g. "0.2")
+- surface_class: string enum
+  - L1_envelope
+  - AA_userop_auth
+  - ERC1271_contract_verify
+  - PQ_verify_onchain
+  - Entropy_attestation
+  - Hash_commitment
+- security_model: string enum
+  - raw
+  - weakest_link
+- depends_on: array[string] (default: [])
+- provenance: object (optional)
+  - repo: string (upstream repo name)
+  - commit: string (upstream git commit hash)
+  - path: string (optional)
+  - toolchain: string (optional)
