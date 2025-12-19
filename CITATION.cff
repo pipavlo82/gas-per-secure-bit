@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it."
+title: "gas-per-secure-bit"
+type: software
+authors:
+  - family-names: "Tvardovskyi"
+    given-names: "Pavlo"
+    email: "shtomko@gmail.com"
+    website: "https://github.com/pipavlo82"
+repository-code: "https://github.com/pipavlo82/gas-per-secure-bit"
+url: "https://github.com/pipavlo82/gas-per-secure-bit"
+abstract: "Benchmarking lab + dataset schema + methodology spec for comparing EVM verification cost normalized by effective security (gas per secure bit), with reproducible provenance."
+keywords:
+  - "Ethereum"
+  - "EVM"
+  - "benchmarking"
+  - "post-quantum cryptography"
+  - "ERC-7913"
+  - "gas"
+license: "MIT"
+year: 2025
