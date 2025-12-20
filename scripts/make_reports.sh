@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "[1/4] Sanity: required files"
+echo "[0/5] Rebuild data/results.csv from data/results.jsonl"
+python3 scripts/rebuild_results_csv.py
+
+
+echo "[1/5] Sanity: required files"
 test -f data/results.jsonl
 test -f scripts/parse_bench.py
 
-echo "[2/4] Sanity: JSONL must be one-JSON-per-line"
+echo "[2/5] Sanity: JSONL must be one-JSON-per-line"
 python3 - <<'PY'
 import json,sys
 bad=0
@@ -23,14 +27,14 @@ if bad:
 print("OK: jsonl parses")
 PY
 
-echo "[3/4] Sanity: uniqueness of (scheme, bench_name, repo, commit)"
+echo "[3/5] Sanity: uniqueness of (scheme, bench_name, repo, commit, chain_profile)"
 python3 - <<'PY'
 import csv,sys
 rows=list(csv.DictReader(open("data/results.csv","r",encoding="utf-8")))
 seen={}
 dups=[]
 for r in rows:
-    k=(r.get("scheme",""), r.get("bench_name",""), r.get("repo",""), r.get("commit",""))
+    k=(r.get("scheme",""), r.get("bench_name",""), r.get("repo",""), r.get("commit",""), r.get("chain_profile",""))
     seen[k]=seen.get(k,0)+1
 for k,c in seen.items():
     if c>1:
@@ -44,20 +48,16 @@ if dups:
 print("OK: no duplicates")
 PY
 
-echo "[4/4] Generate reports"
+echo "[4/5] Generate reports"
 if test -f scripts/report_weakest_link.py; then
   python3 scripts/report_weakest_link.py
 else
   echo "WARN: scripts/report_weakest_link.py not found; skipping"
 fi
 
-if test -f scripts/report_protocol_readiness.py; then
-  python3 scripts/report_protocol_readiness.py
-else
-  echo "INFO: scripts/report_protocol_readiness.py not found; protocol report is static (reports/protocol_readiness.md)"
-fi
+echo "[5/5] Generate protocol readiness"
+python3 scripts/make_protocol_readiness.py
 
 echo "Done."
 ls -la reports || true
 
-python3 scripts/make_protocol_readiness.py
