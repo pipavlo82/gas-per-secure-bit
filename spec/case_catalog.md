@@ -30,3 +30,39 @@ and compute effective_security_bits = min(security-equivalent bits over the depe
 
 ## Pipelines / graphs
 A “pipeline” is a named dependency graph (see `spec/case_graph.md`) that defines how records compose into an end-to-end security assumption set.
+## vNext: Entropy / Attestation surface nodes (draft)
+
+These nodes extend the case-graph model beyond signature verification into protocol envelope surfaces
+(randomness, commitments, attestations). For these rows, the canonical denominator is:
+
+- security_metric_type = `H_min`
+- security_metric_value = min-entropy bits under an explicit threat model
+
+### Canonical node IDs (vNext)
+- `randao::l1_randao_mix_surface`
+- `commitment::sequencer_commitment_surface`
+- `attestation::relay_attestation_surface`
+- `attestation::bundler_attestation_surface`
+- `vrf::vrf_verify_surface`
+- `entropy::beacon_oracle_surface`
+## Canonical baseline nodes (vNext)
+
+- `ecdsa::l1_envelope_assumption`
+  - Purpose: model L1 transaction envelope dominance for end-to-end AA security.
+  - security_metric_type: `security_equiv_bits`
+  - security_metric_value: 128
+
+- `randao::l1_randao_mix_surface`
+  - Purpose: protocol entropy surface baseline (RANDAO mix), used for vNext VRF/randomness graphs.
+  - security_metric_type: `H_min`
+  - security_metric_value: placeholder (explicitly threat-model dependent)
+
+- `attestation::relay_attestation_surface`
+  - Purpose: protocol envelope surface baseline (relay/builder attestations), used for vNext readiness graphs.
+  - security_metric_type: `H_min`
+  - security_metric_value: placeholder (explicitly threat-model dependent)
+
+### Notes
+- These are intentionally modeled as separate surfaces so “PQ verify gas” is not conflated with
+  protocol envelope readiness.
+- Rows may start as baseline placeholders (gas_verify=0) and later be upgraded to measured benches.

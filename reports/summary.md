@@ -8,6 +8,21 @@ Generated artifacts in this repo:
 - `reports/protocol_readiness.md` (human-written summary)
 
 ---
+## Executive summary (what exists today)
+
+A) **Dataset + normalized metric**  
+- `data/results.jsonl` → `data/results.csv` with explicit provenance and denominators.  
+- Primary signature normalization: `gas_per_secure_bit = gas_verify / security_equiv_bits`.
+
+B) **Weakest-link / protocol envelope dominance**  
+- `reports/weakest_link_report.md` computes `effective_security_bits = min(dep_i)` from `depends_on[]`.  
+- Supports `{security_equiv_bits, lambda_eff, H_min}` so it can extend from signatures → entropy surfaces.
+
+C) **Standardized case graph (surface taxonomy)**  
+- `spec/case_graph.md` defines canonical surfaces S0–S3 and L1 envelope + vNext entropy/attestation nodes.  
+- Goal: stop mixing scopes (microbench vs AA pipeline) and make readiness blockers measurable.
+
+Note: entropy/attestation nodes are currently **placeholders** (`gas_verify=0`) until measured; they exist to wire the model and dataset schema now.
 
 ## TL;DR
 
