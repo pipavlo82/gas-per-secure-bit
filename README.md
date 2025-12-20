@@ -11,7 +11,33 @@
 
 ---
 
-## Methodology: surfaces + weakest-link
+## Table of Contents
+
+- [Methodology (surfaces + weakest-link)](#methodology-surfaces--weakest-link)
+- [Core Metric](#core-metric)
+- [Public Review Entry Points](#public-review-entry-points)
+- [Why This Exists](#why-this-exists)
+- [New: Weakest-link + Protocol Readiness Surfaces](#new-weakest-link--protocol-readiness-surfaces)
+- [Reproducible Reports & Data Policy](#reproducible-reports--data-policy)
+- [Measured Protocol Surfaces (EVM/L1)](#measured-protocol-surfaces-evml1)
+- [Chart](#chart)
+- [Current Dataset (EVM/L1) — Gas Snapshots](#current-dataset-evml1--gas-snapshots)
+- [What We Built](#what-we-built)
+- [Repo Layout](#repo-layout)
+- [Dataset Schema (CSV)](#dataset-schema-csv)
+- [Security Normalization (Explicit Assumptions)](#security-normalization-explicit-assumptions)
+- [Quick Start](#quick-start)
+- [Benchmarks Included](#benchmarks-included)
+- [Related Work / References](#related-work--references)
+- [Roadmap](#roadmap)
+- [License](#license)
+- [Disclaimer](#disclaimer)
+- [Maintainer](#maintainer)
+- [Citation](#citation)
+
+---
+
+## Methodology (surfaces + weakest-link)
 
 To avoid mixing benchmark scopes, the dataset supports a surface taxonomy and an optional dependency graph:
 
@@ -70,7 +96,7 @@ If you have 10 minutes:
 1. `reports/protocol_readiness.md` — protocol constraints and why "gas/verify" can be misleading.
 2. `spec/case_catalog.md` + `spec/case_graph.md` — AA weakest-link (envelope dominance) cases + canonical graphs.
 3. `spec/gas_per_secure_bit.md` — definitions, normalization rules, reporting conventions.
-4. `data/results.jsonl` — source-of-truth dataset (CSV is derived); charts are derived from it.
+4. `data/results.jsonl` — canonical dataset (CSV + reports are deterministically rebuilt from it).
 
 ---
 
@@ -104,21 +130,18 @@ Reports:
 - `reports/entropy_surface_notes.md`
 
 ---
-# Reproducible Reports & Data Policy
+
+## Reproducible Reports & Data Policy
 
 This repository follows a **single canonical source of truth** model for benchmark data and reports.
 
----
-
-## Canonical Data
+### Canonical Data
 
 - **`data/results.jsonl`** is the **only canonical input**.
 - Each line is exactly one JSON object (JSONL).
-- All edits, additions, and corrections must be done in `results.jsonl` only.
+- All edits, additions, and corrections must be done in `data/results.jsonl` only.
 
----
-
-## Derived Artifacts
+### Derived Artifacts
 
 The following files are **derived deterministically** and **must not be edited by hand**:
 
@@ -129,9 +152,7 @@ The following files are **derived deterministically** and **must not be edited b
 
 They are rebuilt from `results.jsonl`.
 
----
-
-## Canonical Pipeline
+### Canonical Pipeline
 
 To regenerate all derived files locally:
 
@@ -146,11 +167,14 @@ This script will:
 4. Generate all reports
 5. Generate protocol readiness
 
----
+Implementation: `scripts/rebuild_results_csv.py` is invoked from `scripts/make_reports.sh`.
 
-## CI Enforcement
+### CI Enforcement
 
-CI runs the same pipeline and fails if any generated file is not committed:
+CI runs the same pipeline and fails if any generated file is not committed.
+
+**CI workflow:** `.github/workflows/reports.yml`  
+It runs `./scripts/make_reports.sh` and fails if `git diff` is non-empty.
 
 ```bash
 git diff --stat
@@ -158,16 +182,19 @@ git diff --stat
 
 If the working tree is not clean after running `make_reports.sh`, the pull request will fail.
 
----
-
-## Chain Profiles / L2 Aliases
+### Chain Profiles / L2 Aliases
 
 Multiple records may exist for the same benchmark under different `chain_profile` values (e.g. `EVM/L1`, `EVM/L2:arbitrum_one`). 
 
-These represent execution-equivalent measurements with different fee or threat-model contexts.
+These represent execution-equivalent measurements with different fee or threat-model contexts:
+- **EVM execution gas is assumed equal** across profiles
+- **Data availability / calldata pricing differs** by chain
+
+---
+
 ## Measured Protocol Surfaces (EVM/L1)
 
-Some protocol-level “surfaces” are now measured for gas on EVM/L1.  
+Some protocol-level "surfaces" are now measured for gas on EVM/L1.  
 For these entries, **gas is measured**, while the **security denominator** (e.g., `H_min`) may still be a **placeholder** until the threat model is finalized.
 
 Current measured surfaces:
@@ -178,29 +205,30 @@ Current measured surfaces:
 Reproduce measurements and refresh dataset + reports:
 
 ```bash
-bash scripts/run_protocol_surfaces.sh
-bash scripts/make_reports.sh
-python3 scripts/make_protocol_readiness.py
+./scripts/run_protocol_surfaces.sh
+./scripts/make_reports.sh
+```
+
 See also:
+- `reports/protocol_readiness.md` (weakest-link readiness table)
+- `reports/weakest_link_report.md`
+- `reports/summary.md`
 
-reports/protocol_readiness.md (weakest-link readiness table)
+---
 
-reports/weakest_link_report.md
-
-reports/summary.md
 ## Chart
 
 ![Gas per secure bit (lower is better)](docs/gas_per_secure_bit_big.svg)
 
 (Full-detail chart: [docs/gas_per_secure_bit.svg](docs/gas_per_secure_bit.svg))
 
-> **NOTE:** Charts are derived from `data/results.csv` (which is generated from `data/results.jsonl`). If you change normalization conventions (e.g., ML-DSA-65 128 → 192), regenerate the dataset and charts.
+> **NOTE:** Charts are derived from `data/results.csv` (rebuilt from `data/results.jsonl` via `./scripts/make_reports.sh`). If you change normalization conventions (e.g., ML-DSA-65 128 → 192), regenerate the dataset and charts.
 
 ---
 
 ## Current Dataset (EVM/L1) — Gas Snapshots
 
-**Source of truth:** `data/results.jsonl` (CSV is derived by `scripts/parse_bench.py`).
+**Source of truth:** `data/results.jsonl` (CSV is deterministically rebuilt by `scripts/rebuild_results_csv.py` via `./scripts/make_reports.sh`).
 
 ### Signature & AA Benchmarks
 
@@ -219,12 +247,12 @@ reports/summary.md
 
 ### Protocol Surfaces (measured)
 
-| Scheme        | Bench name                                | gas_verify  | security_metric_value (bits) | gas / secure-bit |
-|---------------|-------------------------------------------|------------:|-----------------------------:|-----------------:|
-| **RANDAO**    | l1_randao_mix_surface                     | 5,993       | 32 (H_min)                   | 187.281          |
-| **Attestation** | relay_attestation_surface               | 12,457      | 128 (H_min)                  | 97.320           |
+| Scheme          | Bench name                    | gas_verify  | security_metric_value (bits) | gas / secure-bit |
+|-----------------|-------------------------------|------------:|-----------------------------:|-----------------:|
+| **RANDAO**      | l1_randao_mix_surface         | 5,993       | 32 (H_min)                   | 187.281          |
+| **Attestation** | relay_attestation_surface     | 12,457      | 128 (H_min)                  | 97.320           |
 
-**Note:** Protocol surfaces use `security_metric_type=H_min`; the current H_min values are declared placeholders until the threat model is pinned down. Gas numbers are measured; denominators are provisional.
+**Note:** Protocol surfaces use `security_metric_type=H_min`; the current H_min values are declared placeholders until the threat model is pinned down. Gas numbers are measured; denominators are provisional. For surfaces, `gas_verify` denotes the measured gas of the surface operation/harness.
 
 **Notes:**
 - `qa_handleOps_userop_foundry` includes the full EIP-4337 pipeline (`EntryPoint.handleOps`), so it is **not** a "pure signature verify" cost.
@@ -241,7 +269,7 @@ A reproducible benchmark lab with:
 - Canonical dataset: `data/results.jsonl` (source of truth)
 - Derived table: `data/results.csv`
 - Schema/spec documents under `spec/`
-- `scripts/parse_bench.py` generates CSV rows and computed `gas_per_secure_bit`
+- `scripts/rebuild_results_csv.py` deterministically rebuilds `data/results.csv` from `data/results.jsonl` (invoked by `./scripts/make_reports.sh`)
 
 ### Runners (Reproducible Ingestion)
 - `scripts/run_vendor_mldsa.sh` — ML-DSA-65 (Foundry gas + log extraction for PreA)
@@ -273,7 +301,7 @@ Vendored repos may be stored under `vendors/`; provenance is always recorded per
 
 ## Dataset Schema (CSV)
 
-Canonical format: `data/results.csv` (derived from `data/results.jsonl`)
+**Tabular format:** `data/results.csv` (derived from canonical `data/results.jsonl`)
 
 Columns:
 - `ts_utc` — timestamp UTC
@@ -345,8 +373,9 @@ From repo root:
 ```bash
 cd /path/to/gas-per-secure-bit
 
+# Clear canonical data (CSV and reports will be regenerated)
 : > data/results.jsonl
-: > data/results.csv
+rm -f data/results.csv reports/*.md || true
 
 # ECDSA (rows)
 RESET_DATA=0 ./scripts/run_ecdsa.sh
@@ -359,6 +388,9 @@ RESET_DATA=0 MLDSA_REF="feature/mldsa-ntt-opt-phase12-erc7913-packedA" ./scripts
 
 # QuantumAccount/Falcon (rows)
 QA_REF=main RESET_DATA=0 ./scripts/run_vendor_quantumaccount.sh
+
+# Regenerate derived artifacts (CSV + reports)
+./scripts/make_reports.sh
 
 wc -l data/results.jsonl data/results.csv
 tail -n 20 data/results.csv
