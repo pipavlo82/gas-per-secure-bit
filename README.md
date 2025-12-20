@@ -149,8 +149,12 @@ The following files are **derived deterministically** and **must not be edited b
 - `reports/summary.md`
 - `reports/weakest_link_report.md`
 - `reports/protocol_readiness.md`
+- `docs/gas_per_secure_bit.svg`
+- `docs/gas_per_secure_bit_big.svg`
 
-They are rebuilt from `results.jsonl`.
+Charts are derived from `data/results.csv` and must not be edited by hand.
+
+They are rebuilt from `data/results.jsonl`.
 
 ### Canonical Pipeline
 
@@ -164,10 +168,11 @@ This script will:
 1. Rebuild `data/results.csv` from `data/results.jsonl`
 2. Validate JSONL integrity
 3. Enforce uniqueness of `(scheme, bench_name, repo, commit, chain_profile)`
-4. Generate all reports
-5. Generate protocol readiness
+4. Generate all reports (including protocol readiness)
 
-Implementation: `scripts/rebuild_results_csv.py` is invoked from `scripts/make_reports.sh`.
+**Pipeline roles:**
+- `scripts/parse_bench.py` — appends records to `data/results.jsonl` (ingestion)
+- `scripts/rebuild_results_csv.py` — deterministically generates CSV + derived reports (invoked by `./scripts/make_reports.sh`)
 
 ### CI Enforcement
 
@@ -373,10 +378,6 @@ From repo root:
 ```bash
 cd /path/to/gas-per-secure-bit
 
-# Clear canonical data (CSV and reports will be regenerated)
-: > data/results.jsonl
-rm -f data/results.csv reports/*.md || true
-
 # ECDSA (rows)
 RESET_DATA=0 ./scripts/run_ecdsa.sh
 
@@ -395,6 +396,8 @@ QA_REF=main RESET_DATA=0 ./scripts/run_vendor_quantumaccount.sh
 wc -l data/results.jsonl data/results.csv
 tail -n 20 data/results.csv
 ```
+
+**Note:** If you want to rebuild from scratch, delete `data/results.jsonl` and rerun the runners. Derived files (CSV + reports) will be regenerated automatically.
 
 ### Sanity Check: Ensure Benches Are Unique
 
