@@ -107,3 +107,28 @@ Where security_bits(x) is derived from records with
 security_metric_type ∈ {security_equiv_bits, lambda_eff, H_min}.
 
 Interpretation (L1): even if the wallet signature is PQ (e.g., 256), end-to-end AA can still be bounded by the L1 envelope (e.g., 128).
+
+## Canonical AA envelope graph (L1)
+
+```mermaid
+flowchart TD
+  S3[S3: AA end-to-end (EntryPoint.handleOps)]
+  S2[S2: AA validation (validateUserOp)]
+  S1[S1: Contract wallet surface (ERC-1271 isValidSignature)]
+  S0[S0: Pure signature verify (verifySignature / verify())]
+
+  ENV[L1 envelope assumption (ECDSA today)]
+  RANDAO[L1 entropy surface: RANDAO mix (H_min)]
+  RELAY[Relay/ordering attestation surface (H_min)]
+
+  S3 --> S2
+  S2 --> S1
+  S1 --> S0
+
+  S3 --> ENV
+  S3 --> RANDAO
+  S3 --> RELAY
+
+  %% Note: S3 depends on protocol envelope and entropy/attestation surfaces.
+  %% Weakest-link model: effective_security_bits = min(security_bits over deps).
+::contentReference[oaicite:0]{index=0}
