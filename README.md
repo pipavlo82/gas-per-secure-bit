@@ -10,6 +10,21 @@
 </div>
 
 ---
+## Methodology: surfaces + weakest-link
+
+To avoid mixing benchmark scopes, the dataset supports a **surface taxonomy** and an optional **dependency graph**:
+
+- Canonical execution surfaces (S0–S3): `spec/case_graph.md`
+- Case catalog / baseline nodes: `spec/case_catalog.md`
+- Weakest-link report (generated): `reports/weakest_link_report.md`
+- One-page status summary: `reports/summary.md`
+
+For any pipeline record with `depends_on[]`:
+
+`effective_security_bits = min(security_bits(dep_i))`
+
+Where `security_bits(x)` is derived from records with
+`security_metric_type ∈ {security_equiv_bits, lambda_eff, H_min}`.
 
 This repository is an experimental benchmarking lab spun out of  
 [`ml-dsa-65-ethereum-verification`](https://github.com/pipavlo82/ml-dsa-65-ethereum-verification).
