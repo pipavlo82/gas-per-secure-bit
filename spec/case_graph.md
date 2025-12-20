@@ -13,8 +13,9 @@ Use `baseline::<name>` for conceptual baselines.
 
 ## Baseline Nodes (recommended)
 
-- `ecdsa::l1_envelope_assumption`
+- `baseline::l1_envelope_ecdsa_assumption`
   - Protocol-level L1 transaction envelope signature assumption (classical ECDSA).
+  - Declared security: 128 bits (classical)
 
 ---
 
@@ -26,10 +27,10 @@ Represents the full user operation execution path (bundler tx → EntryPoint →
 
 **Dependencies:**
 - `falcon1024::qa_handleOps_userop_foundry` (measured)
-- `ecdsa::l1_envelope_assumption` (baseline)
+- `baseline::l1_envelope_ecdsa_assumption` (conceptual baseline)
 
 **Weakest-link effective security:**
-- `min( security(falcon1024::qa_handleOps_userop_foundry), security(ecdsa::l1_envelope_assumption) )`
+- `min( security(falcon1024::qa_handleOps_userop_foundry), security(baseline::l1_envelope_ecdsa_assumption) )`
 
 ---
 
@@ -39,10 +40,10 @@ Represents account-level authentication without the full handleOps envelope.
 
 **Dependencies:**
 - `falcon1024::qa_validateUserOp_userop_log` (measured)
-- `ecdsa::l1_envelope_assumption` (baseline)
+- `baseline::l1_envelope_ecdsa_assumption` (conceptual baseline)
 
 **Weakest-link effective security:**
-- `min( security(falcon1024::qa_validateUserOp_userop_log), security(ecdsa::l1_envelope_assumption) )`
+- `min( security(falcon1024::qa_validateUserOp_userop_log), security(baseline::l1_envelope_ecdsa_assumption) )`
 
 ---
 
@@ -58,10 +59,18 @@ Represents pure on-chain PQ verification primitive cost, without protocol envelo
 
 ---
 
+**Important:** Gas is taken from the measured S3/S2 benchmark node; baseline nodes contribute only to effective security via weakest-link.
+
+---
+
 ## Notes
 
 - These graphs are intentionally minimal: they isolate the protocol envelope dominance effect.
 - Additional edges can be introduced for sequencing/randomness/attestation surfaces as the dataset expands.
+
+**Taxonomy:**
+- **S0–S3** = surface taxonomy (benchmark scopes)
+- **G1–G3** = canonical graphs (execution paths over surfaces + baselines)
 
 ---
 
@@ -79,7 +88,7 @@ Represents pure on-chain PQ verification primitive cost, without protocol envelo
 
 `AA_handleOps` depends on:
 - `AA_validateUserOp`
-- `ecdsa::l1_envelope_assumption` (L1 envelope)
+- `baseline::l1_envelope_ecdsa_assumption` (L1 envelope)
 - `randao::l1_randao_mix_surface` (entropy surface; vNext)
 
 `AA_validateUserOp` depends on:
@@ -90,6 +99,10 @@ Represents pure on-chain PQ verification primitive cost, without protocol envelo
 For any pipeline row with `depends_on`:
 - `effective_security_bits = min(security_bits(dep_i))`
 - For entropy nodes: `security_bits(dep)` is `H_min` in bits.
+
+**Lookup rule:**
+- If node is `scheme::bench_name`, take `security_metric_value` from that dataset record.
+- If node is `baseline::...`, use declared constant value defined in this document.
 
 ---
 
@@ -146,16 +159,18 @@ flowchart TD
   S0[S0: Pure signature verify - verifySignature / verify]
 
   ENV[L1 envelope assumption - ECDSA today]
-  RANDAO[L1 entropy surface: RANDAO mix - H_min]
-  RELAY[Relay/ordering attestation surface - H_min]
+  RANDAO[L1 entropy surface: RANDAO mix - H_min - vNext]
+  RELAY[Relay/ordering attestation surface - H_min - vNext]
 
   S3 --> S2
   S2 --> S1
   S1 --> S0
 
   S3 --> ENV
-  S3 --> RANDAO
-  S3 --> RELAY
+  
+  %% vNext dependencies (optional until threat model finalized)
+  S3 -.-> RANDAO
+  S3 -.-> RELAY
 
   style S3 fill:#f9f,stroke:#333,stroke-width:2px
   style ENV fill:#faa,stroke:#333,stroke-width:2px
@@ -163,5 +178,7 @@ flowchart TD
   style RELAY fill:#aaf,stroke:#333,stroke-width:2px
 ```
 
-**Note:** S3 depends on protocol envelope and entropy/attestation surfaces.  
+**Note:** S3 depends on protocol envelope and entropy/attestation surfaces (vNext).  
 **Weakest-link model:** `effective_security_bits = min(security_bits over deps)`.
+
+Dotted lines indicate vNext dependencies that are not yet mandatory (threat model not finalized).
