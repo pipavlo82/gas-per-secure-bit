@@ -22,7 +22,8 @@ C) **Standardized case graph (surface taxonomy)**
 - `spec/case_graph.md` defines canonical surfaces S0–S3 and L1 envelope + vNext entropy/attestation nodes.  
 - Goal: stop mixing scopes (microbench vs AA pipeline) and make readiness blockers measurable.
 
-Note: entropy/attestation nodes are currently **placeholders** (`gas_verify=0`) until measured; they exist to wire the model and dataset schema now.
+Note: protocol surfaces are now measured via Foundry harness tests and updated deterministically via `scripts/run_protocol_surfaces.sh` (the runner prunes old surface records and appends fresh measured records, then regenerates reports).
+
 
 ## TL;DR
 
@@ -37,7 +38,7 @@ Note: entropy/attestation nodes are currently **placeholders** (`gas_verify=0`) 
 ### 1) Dataset + normalization (core)
 
 **Metric:**
-- `gas_per_secure_bit = gas_verify / security_metric_value`
+Normalization: `gas_per_secure_bit = gas_verify / security_metric_value`, where `security_metric_type ∈ {security_equiv_bits, lambda_eff, H_min}`.
 
 For signatures today:
 - `security_metric_type = security_equiv_bits` (declared convention; explicit in dataset)
