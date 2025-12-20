@@ -59,3 +59,5 @@ fi
 
 echo "Done."
 ls -la reports || true
+
+python3 scripts/make_protocol_readiness.py

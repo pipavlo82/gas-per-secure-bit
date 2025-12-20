@@ -1,49 +1,33 @@
-# Protocol readiness: weakest-link surfaces (dataset-backed)
+# Protocol Readiness Table (auto-generated)
 
-This report summarizes where post-quantum (PQ) security assumptions can be bottlenecked by classical components, using dataset records and weakest-link composition.
+Generated from `data/results.jsonl` using a weakest-link dependency cap model (`depends_on`).
 
-## 1) Envelope dominance (L1 transaction signature)
+Reproduce:
+```bash
+python3 scripts/make_protocol_readiness.py
+```
 
-Even if an AA wallet uses a PQ signature scheme, end-to-end security can remain bounded by the protocol envelope signature that carries the transaction on L1.
+| Category | Surface | Gas | effective_security_bits | Target (bits) | Capped by | Blocker |
+|---|---|---:|---:|---:|---|---|
+| attestation | `attestation::relay_attestation_surface` | 12457 | 128 | 128 | - |  |
+| ecdsa | `ecdsa::ecdsa_erc1271_isValidSignature_foundry` | 21413 | 128 | 128 | - |  |
+| ecdsa | `ecdsa::ecdsa_verify_bytes65_foundry` | 24032 | 128 | 128 | - |  |
+| ecdsa | `ecdsa::ecdsa_verify_ecrecover_foundry` | 21126 | 128 | 128 | - |  |
+| ecdsa | `ecdsa::l1_envelope_assumption` | 0 | 128 | 128 | - |  |
+| entropy | `entropy::randao_hash_based_assumption` | 0 | 128 | 0 | - |  |
+| falcon1024 | `falcon1024::falcon_verifySignature_log` | 10336055 | 256 | 256 | - |  |
+| falcon1024 | `falcon1024::qa_getUserOpHash_foundry` | 218333 | 256 | 256 | - |  |
+| falcon1024 | `falcon1024::qa_handleOps_userop_foundry` | 10966076 | 256 | 256 | - |  |
+| falcon1024 | `falcon1024::qa_handleOps_userop_foundry_weakest_link` | 10966076 | 128 | 256 | ecdsa::l1_envelope_assumption | Capped by L1 ECDSA envelope assumption (PQ not enshrined end-to-end). |
+| falcon1024 | `falcon1024::qa_handleOps_userop_foundry_weakest_link_vnext` | 10966076 | 32 | 256 | randao::l1_randao_mix_surface | Measured gas; H_min denominator is a placeholder until threat model is fixed. |
+| falcon1024 | `falcon1024::qa_validateUserOp_userop_log` | 10589132 | 256 | 256 | - |  |
+| falcon1024 | `falcon1024::qa_validateUserOp_userop_log_weakest_link` | 10589132 | 128 | 256 | ecdsa::l1_envelope_assumption | Capped by L1 ECDSA envelope assumption (PQ not enshrined end-to-end). |
+| mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho0_log` | 1499354 | 128 | 192 | - |  |
+| mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho1_log` | 1499354 | 128 | 192 | - |  |
+| mldsa65 | `mldsa65::verify_poc_foundry` | 68901612 | 128 | 192 | - |  |
+| randao | `randao::l1_randao_mix_surface` | 5993 | 32 | 128 | - |  |
+| vrf_pq | `vrf_pq::pq_vrf_target_assumption` | 0 | 192 | 0 | - |  |
 
-**Dataset nodes**
-- Baseline: `ecdsa::l1_envelope_assumption` (declared 128-bit equivalent)
-- AA pipelines (measured): `falcon1024::qa_handleOps_userop_foundry`, `falcon1024::qa_validateUserOp_userop_log`
-- Derived weakest-link views:
-  - `falcon1024::qa_handleOps_userop_foundry_weakest_link`
-  - `falcon1024::qa_validateUserOp_userop_log_weakest_link`
-
-**Key result**
-- In weakest-link composition, `effective_security_bits = min(256, 128) = 128`.
-- This formalizes the “PQ inside AA does not automatically upgrade the whole system” statement in a measurable way.
-
-## 2) Entropy / ordering / attestation surfaces (vNext)
-
-Separately from signature authentication, protocol-level security depends on randomness, ordering, and attestations (L2 / committees / relays).
-
-This repo models those as benchmark nodes using:
-- `security_metric_type = H_min` (min-entropy bits) under an explicit `threat_model`
-- `surface_class`, `entropy_source`, `attestation_surface`
-
-**Baseline target nodes added**
-- `entropy::randao_hash_based_assumption` (H_min, declared)
-- `vrf_pq::pq_vrf_target_assumption` (H_min, declared)
-
-These are placeholders until concrete on-chain verification costs and conformance tests are added.
-
-## 3) What changes end-to-end outcomes
-
-To move the bottleneck, a PQ-ready stack must address:
-1. Protocol envelope signature surface (L1)
-2. AA verification surface (account / EntryPoint)
-3. Entropy / VRF attestation surface
-4. L2 attestation aggregation surface (where applicable)
-
-This dataset and graph methodology provides a standardized way to track progress across those surfaces.
-
-## References within this repo
-
-- Case catalog: `spec/case_catalog.md`
-- Case graphs: `spec/case_graph.md`
-- Weakest-link report: `reports/weakest_link_report.md`
-- Entropy surfaces note: `reports/entropy_surface_notes.md`
+Notes:
+- `effective_security_bits` is conservative: it never exceeds the weakest dependency in `depends_on`.
+- `H_min` surfaces are currently placeholders until the threat model is finalized (gas is measured).
