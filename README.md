@@ -104,7 +104,29 @@ Reports:
 - `reports/entropy_surface_notes.md`
 
 ---
+## Measured Protocol Surfaces (EVM/L1)
 
+Some protocol-level “surfaces” are now measured for gas on EVM/L1.  
+For these entries, **gas is measured**, while the **security denominator** (e.g., `H_min`) may still be a **placeholder** until the threat model is finalized.
+
+Current measured surfaces:
+
+- `randao::l1_randao_mix_surface` — gas = **5,993**, `H_min` = **32** (placeholder)
+- `attestation::relay_attestation_surface` — gas = **12,457**, `H_min` = **128** (placeholder)
+
+Reproduce measurements and refresh dataset + reports:
+
+```bash
+bash scripts/run_protocol_surfaces.sh
+bash scripts/make_reports.sh
+python3 scripts/make_protocol_readiness.py
+See also:
+
+reports/protocol_readiness.md (weakest-link readiness table)
+
+reports/weakest_link_report.md
+
+reports/summary.md
 ## Chart
 
 ![Gas per secure bit (lower is better)](docs/gas_per_secure_bit_big.svg)
