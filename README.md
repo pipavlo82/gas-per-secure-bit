@@ -104,6 +104,67 @@ Reports:
 - `reports/entropy_surface_notes.md`
 
 ---
+# Reproducible Reports & Data Policy
+
+This repository follows a **single canonical source of truth** model for benchmark data and reports.
+
+---
+
+## Canonical Data
+
+- **`data/results.jsonl`** is the **only canonical input**.
+- Each line is exactly one JSON object (JSONL).
+- All edits, additions, and corrections must be done in `results.jsonl` only.
+
+---
+
+## Derived Artifacts
+
+The following files are **derived deterministically** and **must not be edited by hand**:
+
+- `data/results.csv`
+- `reports/summary.md`
+- `reports/weakest_link_report.md`
+- `reports/protocol_readiness.md`
+
+They are rebuilt from `results.jsonl`.
+
+---
+
+## Canonical Pipeline
+
+To regenerate all derived files locally:
+
+```bash
+./scripts/make_reports.sh
+```
+
+This script will:
+1. Rebuild `data/results.csv` from `data/results.jsonl`
+2. Validate JSONL integrity
+3. Enforce uniqueness of `(scheme, bench_name, repo, commit, chain_profile)`
+4. Generate all reports
+5. Generate protocol readiness
+
+---
+
+## CI Enforcement
+
+CI runs the same pipeline and fails if any generated file is not committed:
+
+```bash
+git diff --stat
+```
+
+If the working tree is not clean after running `make_reports.sh`, the pull request will fail.
+
+---
+
+## Chain Profiles / L2 Aliases
+
+Multiple records may exist for the same benchmark under different `chain_profile` values (e.g. `EVM/L1`, `EVM/L2:arbitrum_one`). 
+
+These represent execution-equivalent measurements with different fee or threat-model contexts.
 ## Measured Protocol Surfaces (EVM/L1)
 
 Some protocol-level “surfaces” are now measured for gas on EVM/L1.  
