@@ -1,8 +1,10 @@
 # Case Catalog (AA weakest-link / protocol envelope dominance)
 
-This catalog defines benchmark “surface classes” used in the dataset.
+This catalog defines benchmark "surface classes" used in the dataset.
 
-## Surface classes
+---
+
+## Surface Classes
 
 ### L1_envelope
 Protocol-level transaction envelope signature assumptions (e.g., ECDSA on L1). This is often a dominant weakest-link dependency for higher-layer authentication.
@@ -22,47 +24,34 @@ Entropy/VRF attestations or commitments that influence ordering/randomness/secur
 ### Hash_commitment
 Hash-only commitment or domain separation primitives used for replay protection and binding.
 
-## Weakest-link model
+---
+
+## Weakest-link Model
+
 For pipelines with dependencies, define:
-- security_model = weakest_link
-- depends_on = [ ... ]
-and compute effective_security_bits = min(security-equivalent bits over the dependency set).
+- `security_model = weakest_link`
+- `depends_on = [ ... ]`
 
-## Pipelines / graphs
-A “pipeline” is a named dependency graph (see `spec/case_graph.md`) that defines how records compose into an end-to-end security assumption set.
-## vNext: Entropy / Attestation surface nodes (draft)
+and compute:
 
-These nodes extend the case-graph model beyond signature verification into protocol envelope surfaces
-(randomness, commitments, attestations). For these rows, the canonical denominator is:
+```
+effective_security_bits = min( security_bits(dep_i) )
+```
 
-- security_metric_type = `H_min`
-- security_metric_value = min-entropy bits under an explicit threat model
+where `security_bits(dep)` is derived from `security_metric_type ∈ {security_equiv_bits, lambda_eff, H_min}`.
 
-### Canonical node IDs (vNext)
-- `randao::l1_randao_mix_surface`
-- `commitment::sequencer_commitment_surface`
-- `attestation::relay_attestation_surface`
-- `attestation::bundler_attestation_surface`
-- `vrf::vrf_verify_surface`
-- `entropy::beacon_oracle_surface`
-## Canonical baseline nodes (vNext)
+---
 
-- `ecdsa::l1_envelope_assumption`
-  - Purpose: model L1 transaction envelope dominance for end-to-end AA security.
-  - security_metric_type: `security_equiv_bits`
-  - security_metric_value: 128
+## Pipelines / Graphs
 
-- `randao::l1_randao_mix_surface`
-  - Purpose: protocol entropy surface baseline (RANDAO mix), used for vNext VRF/randomness graphs.
-  - security_metric_type: `H_min`
-  - security_metric_value: placeholder (explicitly threat-model dependent)
+A "pipeline" is a named dependency graph that defines how records compose into an end-to-end security assumption set.
 
-- `attestation::relay_attestation_surface`
-  - Purpose: protocol envelope surface baseline (relay/builder attestations), used for vNext readiness graphs.
-  - security_metric_type: `H_min`
-  - security_metric_value: placeholder (explicitly threat-model dependent)
+For concrete node IDs, baseline definitions, and canonical dependency graphs, see `spec/case_graph.md`.
 
-### Notes
-- These are intentionally modeled as separate surfaces so “PQ verify gas” is not conflated with
-  protocol envelope readiness.
-- Rows may start as baseline placeholders (gas_verify=0) and later be upgraded to measured benches.
+---
+
+## Notes
+
+- Surface classes are intentionally modeled separately so "PQ verify gas" is not conflated with protocol envelope readiness.
+- Records may start as baseline placeholders (`gas_verify=0`) and later be upgraded to measured benches.
+- Rows should be tagged with appropriate surface class metadata to enable correct weakest-link composition.
