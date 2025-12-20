@@ -6,6 +6,10 @@ on:
   push:
     branches: [ main ]
 
+concurrency:
+  group: reports-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   reports:
     runs-on: ubuntu-latest
@@ -27,7 +31,6 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/make_reports.sh
-          python3 scripts/make_protocol_readiness.py
 
       - name: Assert working tree clean (reports/data committed)
         shell: bash
