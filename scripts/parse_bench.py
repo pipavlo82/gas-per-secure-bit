@@ -151,6 +151,10 @@ def normalize_row(raw: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, An
     if isinstance(security_model, str) and security_model:
         out["security_model"] = security_model
 
+    aggregation_mode = raw.get("aggregation_mode")
+    if isinstance(aggregation_mode, str) and aggregation_mode:
+        out["aggregation_mode"] = aggregation_mode
+
     depends_on = raw.get("depends_on")
     if isinstance(depends_on, list) and depends_on:
         out["depends_on"] = [str(x) for x in depends_on]
@@ -187,6 +191,7 @@ def regen_csv_from_jsonl(jsonl_path: Path, csv_path: Path) -> None:
         "commit",
         "scheme",
         "bench_name",
+        "aggregation_mode",
         "chain_profile",
         "gas_verify",
         "security_metric_type",
