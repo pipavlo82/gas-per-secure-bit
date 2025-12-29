@@ -520,7 +520,7 @@ Contact: shtomko@gmail.com
 If you use this repository (methodology, dataset schema, runners, or benchmarks) in research or production evaluation, please cite it as:
 
 ```
-Pavlo Tvardovskyi, gas-per-secure-bit (GitHub repository), YYYY.
+Pavlo Tvardovskyi, gas-per-secure-bit (GitHub repository), 2025.
 https://github.com/pipavlo82/gas-per-secure-bit
 ```
 
@@ -537,4 +537,4 @@ folding / accumulation schemes).
 As a result, “gas per verify” alone is insufficient: engineering decisions require **surface-aware, security-normalized**
 benchmarks across L1/L2/AA verification surfaces and, eventually, PQ aggregation proof verification surfaces.
 
-See:spec/pq_signature_aggregation_context.md 
+See: [spec/pq_signature_aggregation_context.md](spec/pq_signature_aggregation_context.md)
