@@ -429,3 +429,16 @@ https://github.com/pipavlo82/gas-per-secure-bit
 ```
 
 For reproducibility, cite a tag or commit hash.
+
+
+## PQ aggregation surfaces (BLS → PQ) — why this matters
+
+Ethereum’s BLS aggregation provides scalability via algebraic structure, but practical verification still includes
+linear work to reconstruct aggregate public keys from participation bitfields. Post-quantum signature families lose
+this algebraic aggregation property, pushing the system toward **proof-based aggregation** (recursive SNARKs or
+folding / accumulation schemes).
+
+As a result, “gas per verify” alone is insufficient: engineering decisions require **surface-aware, security-normalized**
+benchmarks across L1/L2/AA verification surfaces and, eventually, PQ aggregation proof verification surfaces.
+
+See: `spec/pq_signature_aggregation_context.md`.
