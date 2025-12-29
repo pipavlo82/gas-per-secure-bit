@@ -537,4 +537,4 @@ folding / accumulation schemes).
 As a result, “gas per verify” alone is insufficient: engineering decisions require **surface-aware, security-normalized**
 benchmarks across L1/L2/AA verification surfaces and, eventually, PQ aggregation proof verification surfaces.
 
-See: `spec/pq_signature_aggregation_context.md`.
+See:spec/pq_signature_aggregation_context.md 
