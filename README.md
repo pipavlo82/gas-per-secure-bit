@@ -139,6 +139,7 @@ graph TD
   B --> D["security_equiv_bits = 192"]
   C --> E["H_min (threat model)"]
   A --> F["effective_security_bits = min(deps)"]
+```
 
 ## Reproducible Reports & Data Policy
 
