@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "[pre] Dedup data/results.jsonl (scheme,bench_name,repo,commit)"
+python3 scripts/dedup_results.py || true
+
 echo "[0/5] Rebuild data/results.csv from data/results.jsonl"
 python3 scripts/rebuild_results_csv.py
 
