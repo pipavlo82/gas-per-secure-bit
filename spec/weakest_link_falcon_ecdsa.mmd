@@ -1,0 +1,11 @@
+flowchart LR
+  WL["AA / ERC-1271 / UserOp wrapper (weakest-link model)"]
+
+  PQ["Signature verify: Falcon-1024 (security_equiv_bits = 256)"]
+  ENV["L1 envelope assumption: ECDSA (security_equiv_bits = 128)"]
+
+  WL -. depends_on .-> PQ
+  WL -. depends_on .-> ENV
+
+  OUT["effective_security_bits = min(deps) = 128"]
+  WL --> OUT
