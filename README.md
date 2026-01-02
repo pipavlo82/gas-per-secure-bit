@@ -132,7 +132,8 @@ Reports:
 ---
 ### Weakest-link composition (why normalization matters)
 
-See: spec/weakest_link.mmd
+- Mermaid diagram: [spec/weakest_link.mmd](spec/weakest_link.mmd)
+
 
 ## Reproducible Reports & Data Policy
 
