@@ -129,9 +129,10 @@ Besides single-bench gas numbers, this repo also models **end-to-end PQ readines
 - **Entropy / attestation surfaces:** measured protocol surfaces (RANDAO, relay attestation) with `H_min` denominators.
 
 Reports:
-- `reports/weakest_link_report.md`
-- `reports/protocol_readiness.md`
-- `reports/entropy_surface_notes.md`
+Reports:
+- [`reports/weakest_link_report.md`](reports/weakest_link_report.md)
+- [`reports/protocol_readiness.md`](reports/protocol_readiness.md)
+- [`reports/entropy_surface_notes.md`](reports/entropy_surface_notes.md)
 
 ---
 ### Weakest-link composition (why normalization matters)
