@@ -74,6 +74,85 @@ A PreA implementation is conformant if:
 - encoding is deterministic and versioned
 - a reference test vector set exists:
   - rho, packedA_ntt, commitA, and a known-good verify() result
+## Wire format (calldata) for `packedA_ntt`
+
+### Inputs carried on-chain
+
+When using the PreA path, the verifier receives:
+
+- `pk: bytes` — ML-DSA-65 public key (FIPS-204 shape)
+- `sig: bytes` — ML-DSA-65 signature (FIPS-204 shape)
+- `msgHash: bytes32` — message digest (already domain-separated by the caller)
+- `packedA_ntt: bytes` — deterministic encoding of the full `A_ntt` matrix (NTT-domain)
+- `commitA: bytes32` — binding commitment to prevent matrix substitution
+
+### Canonical calldata layout (recommended)
+
+`verifyWithPackedA(pk, sig, msgHash, packedA_ntt, commitA)`
+
+- `packedA_ntt` MUST be fixed-length for the selected scheme parameters.
+- `packedA_ntt` MUST be deterministic and versioned.
+
+Recommended structure:
+
+- `format_id: bytes4` (e.g. `0x50524541` = "PREA")
+- `version: uint8` (e.g. `1`)
+- `params_id: uint8` (optional; e.g. identifies ML-DSA-65 / shape)
+- `payload: bytes` (the matrix bytes, row-major, deterministic coeff order)
+
+> Note: the exact payload packing is intentionally a *separate spec decision*.
+> This document standardizes the *wire contract* (what is passed + how it is bound),
+> not the internal compression format.
+
+## CommitA binding (anti-substitution)
+
+### Threat: matrix substitution
+An adversary (bundler, relayer, middleware, or L2 operator) may try to replace
+`packedA_ntt` with another matrix that changes `w = A*z - c*t1` while keeping other
+inputs unchanged.
+
+### Binding rule (normative)
+
+Verifier MUST enforce:
+
+1) `hashA = keccak256(packedA_ntt)`
+2) `context = keccak256(abi.encodePacked(chainid, address(this)))` (minimum viable domain separation)
+3) `commitA_expected = keccak256(abi.encodePacked(
+       "PreA/MLDSA65/v1",
+       msgHash,
+       hashA,
+       context
+   ))`
+4) `require(commitA == commitA_expected)`
+
+Notes:
+- Including `msgHash` binds `packedA_ntt` to a specific message context (prevents reuse across unrelated messages).
+- `context` prevents cross-chain / cross-verifier replay.
+- If you also want to bind to `rho`, include it *explicitly* (only if `rho` is a caller-visible input):
+  `... abi.encodePacked("PreA/MLDSA65/v1", rho, msgHash, hashA, context)`
+
+## ABI reference (quick)
+
+### Solidity interfaces (minimal)
+
+```solidity
+interface IPreA_MLDSA65_Verifier {
+    function verify(bytes calldata pk, bytes calldata sig, bytes32 msgHash) external view returns (bool);
+
+    function verifyWithPackedA(
+        bytes calldata pk,
+        bytes calldata sig,
+        bytes32 msgHash,
+        bytes calldata packedA_ntt,
+        bytes32 commitA
+    ) external view returns (bool);
+}
+
+ERC-7913 style adapter (common in AA / wallets)
+interface IERC7913SignatureVerifier {
+    function verify(bytes32 hash, bytes calldata signature) external view returns (bytes4);
+}
+
 
 ## Notes
 
