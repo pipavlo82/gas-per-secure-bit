@@ -93,10 +93,14 @@ This allows apples-to-apples comparisons across schemes at different security ta
 ## Public Review Entry Points
 
 If you have 10 minutes:
-1. `reports/protocol_readiness.md` — protocol constraints and why "gas/verify" can be misleading.
-2. `spec/case_catalog.md` + `spec/case_graph.md` — AA weakest-link (envelope dominance) cases + canonical graphs.
-3. `spec/gas_per_secure_bit.md` — definitions, normalization rules, reporting conventions.
-4. `data/results.jsonl` — canonical dataset (CSV + reports are deterministically rebuilt from it).
+### Public Review Entry Points
+
+If you have 10 minutes:
+
+1. [reports/protocol_readiness.md](reports/protocol_readiness.md) — protocol constraints and why “gas/verify” can be misleading.
+2. [spec/case_catalog.md](spec/case_catalog.md) + [spec/case_graph.md](spec/case_graph.md) — AA weakest-link (envelope dominance) cases + canonical graphs.
+3. [spec/gas_per_secure_bit.md](spec/gas_per_secure_bit.md) — definitions, normalization rules, reporting conventions.
+4. [data/results.jsonl](data/results.jsonl) — canonical dataset (CSV + reports are deterministically rebuilt from it).
 
 ---
 
