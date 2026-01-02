@@ -132,13 +132,7 @@ Reports:
 ---
 ### Weakest-link composition (why normalization matters)
 
-```mermaid
-graph TD
-  A[Protocol surface: ERC-1271 / AA wrapper] -->|depends on| B[Signature verify: PQ ML-DSA-65]
-  A -->|depends on| C[Entropy source: RANDAO mix]
-  B --> D[security_equiv_bits = 192]
-  C --> E[H_min = (threat-model)]
-  A --> F[effective_security_bits = min(deps)]
+See: spec/weakest_link.mmd
 
 ## Reproducible Reports & Data Policy
 
