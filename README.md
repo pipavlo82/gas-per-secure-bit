@@ -135,12 +135,10 @@ Reports:
 - [`reports/entropy_surface_notes.md`](reports/entropy_surface_notes.md)
 
 ---
-### Weakest-link composition (why normalization matters)
+## Weakest-link composition (why normalization matters)
 
-See: spec/weakest_link.mmd
-=======
-- Mermaid diagram: [spec/weakest_link.mmd](spec/weakest_link.mmd)
-
+- Mermaid diagram: [`spec/weakest_link.mmd`](spec/weakest_link.mmd)
+- Example (Falcon Cat5 bounded by ECDSA envelope): [`spec/weakest_link_falcon_ecdsa.mmd`](spec/weakest_link_falcon_ecdsa.mmd)
 
 ## Reproducible Reports & Data Policy
 
