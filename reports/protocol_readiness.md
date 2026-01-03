@@ -31,3 +31,25 @@ python3 scripts/make_protocol_readiness.py
 Notes:
 - `effective_security_bits` is conservative: it never exceeds the weakest dependency in `depends_on`.
 - `H_min` surfaces are currently placeholders until the threat model is finalized (gas is measured).
+
+<!-- MLDSA65_VENDOR_BEGIN -->
+## ML-DSA-65 (vendor / pinned ref) — measured points
+
+These rows are produced by `scripts/run_vendor_mldsa.sh` and currently require pinning `MLDSA_REF=feature/mldsa-ntt-opt-phase12-erc7913-packedA` because upstream `main` does not contain the gas harness tests (`test_verify_gas_poc`, `PreA_ComputeW_GasMicro`) yet.
+
+Note: the dataset currently records ML-DSA-65 rows with `security_metric_type=lambda_eff` and `value=128`. To avoid rewriting later, the table keeps that denominator, and `notes` additionally reports `security_equiv_bits=192` and `gas/bit@192` (= gas_verify/192).
+
+Reproduce:
+
+```bash
+export MLDSA_REF=feature/mldsa-ntt-opt-phase12-erc7913-packedA
+bash scripts/run_vendor_mldsa.sh
+bash scripts/make_reports.sh
+```
+
+| bench | gas_verify | denom | value | gas/bit | vendor commit | notes |
+|---|---:|---|---:|---:|---|---|
+| `verify_poc_foundry` | 68,901,612 | `lambda_eff` | 128 | 538,293.84375 | `d9aabc14cf13` | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle=test_verify_gas_poc) | sec... |
+| `preA_compute_w_fromPackedA_ntt_rho0_log` | 1,499,354 | `lambda_eff` | 128 | 11,713.703125 | `d9aabc14cf13` | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle=gas_compute_w_fromPacked_A... |
+| `preA_compute_w_fromPackedA_ntt_rho1_log` | 1,499,354 | `lambda_eff` | 128 | 11,713.703125 | `d9aabc14cf13` | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle=gas_compute_w_fromPacked_A... |
+<!-- MLDSA65_VENDOR_END -->
