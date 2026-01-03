@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import ast
 import csv
 import json
 import subprocess
@@ -33,10 +34,27 @@ def parse_input(arg: str) -> List[Dict[str, Any]]:
     """
     Accept either:
       - a JSON string representing one object
-      - a path to a JSONL file (one JSON object per line)
+      - a path to a file:
+          * JSON: a single object {...} or array [...]
+          * JSONL: one JSON object per line
     """
     p = Path(arg)
     if p.exists() and p.is_file():
+        text = p.read_text(encoding="utf-8").strip()
+        if not text:
+            return []
+
+        # First try: parse as normal JSON (object or list)
+        try:
+            obj = json.loads(text)
+            if isinstance(obj, list):
+                return [x for x in obj if isinstance(x, dict)]
+            if isinstance(obj, dict):
+                return [obj]
+        except Exception:
+            pass
+
+        # Fallback: treat as JSONL (one object per line)
         rows: List[Dict[str, Any]] = []
         with p.open("r", encoding="utf-8") as f:
             for line in f:
@@ -113,7 +131,6 @@ def normalize_row(raw: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, An
     sec_type = get_any(raw, ["security_metric_type", "security-type"], "unknown")
     sec_val = float(get_any(raw, ["security_metric_value", "security-value"], 0.0))
 
-    # gas/bit (only meaningful if sec_val > 0)
     gas_per_bit: Optional[float] = (gas_verify / sec_val) if sec_val > 0 else None
 
     hash_profile = get_any(raw, ["hash_profile", "hash"], "unknown")
@@ -142,8 +159,8 @@ def normalize_row(raw: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, An
         if p_path:
             out["provenance"]["path"] = p_path
 
-    # Pass-through optional vNext fields (for reports / weakest-link analysis)
-    surface_class = raw.get("surface_class")
+    # vNext passthrough fields
+    surface_class = get_any(raw, ["surface_class", "surface"], None)
     if isinstance(surface_class, str) and surface_class:
         out["surface_class"] = surface_class
 
@@ -158,6 +175,8 @@ def normalize_row(raw: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, An
     depends_on = raw.get("depends_on")
     if isinstance(depends_on, list) and depends_on:
         out["depends_on"] = [str(x) for x in depends_on]
+    elif isinstance(depends_on, str) and depends_on.strip():
+        out["depends_on"] = depends_on.strip()
 
     return out
 
@@ -167,7 +186,6 @@ def ensure_results_files(root: Path) -> Tuple[Path, Path]:
     data_dir.mkdir(parents=True, exist_ok=True)
     jsonl_path = data_dir / "results.jsonl"
     csv_path = data_dir / "results.csv"
-    # Touch if missing (so append works even on a clean repo)
     if not jsonl_path.exists():
         jsonl_path.write_text("", encoding="utf-8")
     if not csv_path.exists():
@@ -175,7 +193,48 @@ def ensure_results_files(root: Path) -> Tuple[Path, Path]:
     return jsonl_path, csv_path
 
 
-def regen_csv_from_jsonl(jsonl_path: Path, csv_path: Path) -> None:
+def _csv_json(obj: Any) -> str:
+    return json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
+
+
+def _normalize_provenance_for_csv(prov: Any) -> str:
+    """
+    CSV cell must contain valid JSON object string, not Python dict repr.
+
+    Accept:
+      - dict -> compact JSON
+      - JSON string -> normalize to compact JSON (if dict)
+      - legacy "{'repo': ...}" -> ast.literal_eval -> compact JSON
+      - other non-empty string -> keep as-is (do not break)
+    """
+    if isinstance(prov, dict):
+        return _csv_json(prov)
+
+    if isinstance(prov, str) and prov.strip():
+        s = prov.strip()
+
+        # already JSON?
+        try:
+            obj = json.loads(s)
+            if isinstance(obj, dict):
+                return _csv_json(obj)
+            return s
+        except Exception:
+            pass
+
+        # legacy python dict repr?
+        try:
+            obj = ast.literal_eval(s)
+            if isinstance(obj, dict):
+                return _csv_json(obj)
+            return s
+        except Exception:
+            return s
+
+    return ""
+
+
+def regen_csv_from_jsonl(jsonl_path: Path, csv_path: Path) -> Tuple[int, int]:
     rows: List[Dict[str, Any]] = []
     with jsonl_path.open("r", encoding="utf-8") as f:
         for line in f:
@@ -184,39 +243,67 @@ def regen_csv_from_jsonl(jsonl_path: Path, csv_path: Path) -> None:
                 continue
             rows.append(json.loads(line))
 
-    # Keep CSV stable: do not include nested provenance or vNext fields here.
+    # Current repo schema: 16 cols
     fields = [
         "ts_utc",
         "repo",
         "commit",
         "scheme",
         "bench_name",
-        "aggregation_mode",
         "chain_profile",
         "gas_verify",
         "security_metric_type",
         "security_metric_value",
         "gas_per_secure_bit",
         "hash_profile",
+        "security_model",
+        "surface_class",
         "notes",
+        "depends_on",
+        "provenance",
     ]
 
     with csv_path.open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()
         for r in rows:
-            w.writerow({k: r.get(k, "") for k in fields})
+            row_out = {k: r.get(k, "") for k in fields}
+
+            dep = r.get("depends_on")
+            if isinstance(dep, list):
+                row_out["depends_on"] = _csv_json(dep)
+            elif isinstance(dep, str) and dep.strip():
+                row_out["depends_on"] = dep
+            else:
+                row_out["depends_on"] = ""
+
+            row_out["provenance"] = _normalize_provenance_for_csv(r.get("provenance"))
+
+            w.writerow(row_out)
+
+    return len(fields), len(rows)
 
 
 def main() -> int:
     if len(sys.argv) < 2:
-        print("Usage: parse_bench.py <json_string_or_jsonl_path>", file=sys.stderr)
+        print("Usage:", file=sys.stderr)
+        print("  parse_bench.py <json_string_or_file_path>     # append to JSONL + rebuild CSV", file=sys.stderr)
+        print("  parse_bench.py --regen <jsonl_path>           # rebuild CSV from JSONL only", file=sys.stderr)
         return 1
 
     root = root_dir()
+    jsonl_path, csv_path = ensure_results_files(root)
+
+    # Regen-only mode (used to keep CSV clean)
+    if sys.argv[1] == "--regen":
+        src = Path(sys.argv[2]) if len(sys.argv) >= 3 else jsonl_path
+        cols, nrows = regen_csv_from_jsonl(src, csv_path)
+        print(f"WROTE {csv_path} cols={cols} rows={nrows}")
+        return 0
+
     defaults = {
-        "repo": root.name,                 # gas-per-secure-bit by default
-        "commit": git_head(root),          # HEAD of gas-per-secure-bit by default
+        "repo": root.name,
+        "commit": git_head(root),
         "ts_utc": utc_ts(),
     }
 
@@ -229,17 +316,14 @@ def main() -> int:
         print(f"ERROR: {e}", file=sys.stderr)
         return 2
 
-    jsonl_path, csv_path = ensure_results_files(root)
-
     # Append JSONL
     with jsonl_path.open("a", encoding="utf-8") as f:
         for r in normalized:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
-    # Full regen CSV from JSONL
-    regen_csv_from_jsonl(jsonl_path, csv_path)
-
-    print("Wrote data/results.jsonl and data/results.csv")
+    # Full regen CSV from JSONL (ensures provenance is JSON, not repr)
+    cols, nrows = regen_csv_from_jsonl(jsonl_path, csv_path)
+    print(f"WROTE {csv_path} cols={cols} rows={nrows}")
     return 0
 
 

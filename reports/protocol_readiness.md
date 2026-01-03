@@ -10,6 +10,8 @@ python3 scripts/make_protocol_readiness.py
 | Category | Surface | Gas | effective_security_bits | Target (bits) | Capped by | Blocker |
 |---|---|---:|---:|---:|---|---|
 | attestation | `attestation::relay_attestation_surface` | 12457 | 128 | 128 | - |  |
+| dilithium | `dilithium::dilithium_verify_nistkat` | 20161676 | 128 | 0 | - |  |
+| dilithium | `dilithium::ethdilithium_verify_evmfriendly` | 13495423 | 128 | 0 | - |  |
 | ecdsa | `ecdsa::ecdsa_erc1271_isValidSignature_foundry` | 21413 | 128 | 128 | - |  |
 | ecdsa | `ecdsa::ecdsa_verify_bytes65_foundry` | 24032 | 128 | 128 | - |  |
 | ecdsa | `ecdsa::ecdsa_verify_ecrecover_foundry` | 21126 | 128 | 128 | - |  |
@@ -69,3 +71,16 @@ Notes:
 - `falcon_handleOps_userOp_e2e` measures an end-to-end `handleOps()` flow, including ERC-4337 surface overhead; treat as a protocol-surface upper bound.
 - Normalization in this repo uses `security_equiv_bits = 256` for Falcon-1024 (Cat5-style denominator).
 <!-- FALCON_VENDOR_END -->
+
+<!-- DILITHIUM_VENDOR_BEGIN -->
+### Dilithium vendor (ZKNoxHQ/ETHDILITHIUM) — pinned ref
+
+| bench | gas | security_metric | bits | gas/bit | repo@commit | security_model | notes |
+|---|---:|---|---:|---:|---|---|---|
+| `dilithium_verify_nistkat` | 20,161,676 | `security_equiv_bits` | 128 | 157513.09375 | `ZKNoxHQ/ETHDILITHIUM`@`df999ed4f80` | `standalone` | sec128=128 gpb128=157513.09375 |
+
+Notes:
+- `dilithium_verify_nistkat` is the NIST-shape verifier in the vendor repo.
+- `ethdilithium_verify_evmfriendly` is the EVM-friendly variant in the same vendor repo.
+- Denominator here uses `security_equiv_bits` (override SEC_BITS_* in the runner if you confirm a different category).
+<!-- DILITHIUM_VENDOR_END -->

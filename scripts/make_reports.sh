@@ -5,8 +5,7 @@ echo "[pre] Dedup data/results.jsonl (scheme,bench_name,repo,commit)"
 python3 scripts/dedup_results.py || true
 
 echo "[0/5] Rebuild data/results.csv from data/results.jsonl"
-python3 scripts/rebuild_results_csv.py
-
+python3 scripts/parse_bench.py --regen data/results.jsonl
 
 echo "[1/5] Sanity: required files"
 test -f data/results.jsonl
@@ -73,6 +72,13 @@ if test -f scripts/patch_protocol_readiness_falcon.py; then
   python3 scripts/patch_protocol_readiness_falcon.py data/results.jsonl reports/protocol_readiness.md
 else
   echo "WARN: scripts/patch_protocol_readiness_falcon.py not found; skipping"
+fi
+
+# Post-process: inject Dilithium vendor measurements (pinned ref)
+if test -f scripts/patch_protocol_readiness_dilithium.py; then
+  python3 scripts/patch_protocol_readiness_dilithium.py
+else
+  echo "WARN: scripts/patch_protocol_readiness_dilithium.py not found; skipping"
 fi
 
 echo "Done."
