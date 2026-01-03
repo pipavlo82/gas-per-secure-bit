@@ -4,7 +4,7 @@
 """
 Generate a grant-friendly protocol readiness table from data/results.jsonl.
 
-This script is adapted to the canonical gas-per-secure-bit JSONL schema:
+Canonical schema expectations (tolerant):
 - scheme, bench_name (canonical ID is "scheme::bench_name")
 - ts_utc (timestamp)
 - gas_verify or gas_surface (fallback gas)
@@ -16,8 +16,12 @@ Output:
 
 Design goals:
 - Conservative: effective_security_bits is capped by weakest dependency.
-- Reproducible: keeps only the latest record per canonical ID by ts_utc (fallback to file order).
-- Tolerant: skips meta/unknown records instead of failing.
+- Reproducible: keep only latest record per canonical ID by ts_utc (fallback to file order).
+- Tolerant: skip malformed/meta records instead of failing.
+
+Important correctness note:
+- DO NOT use obj["surface"] as record id. In this repo it is a "surface class"
+  (e.g. "sig::verify") and would collide across multiple benchmarks.
 """
 
 from __future__ import annotations
@@ -33,14 +37,17 @@ DATA_JSONL = ROOT / "data" / "results.jsonl"
 OUT_MD = ROOT / "reports" / "protocol_readiness.md"
 
 
-# Grant-facing target bits (not used for computations; display only)
-DEFAULT_TARGET_BITS_BY_CATEGORY = {
+# Grant-facing target bits (display hint only).
+# If category is missing here, we fallback to max(own_bits, effective_bits).
+DEFAULT_TARGET_BITS_BY_CATEGORY: Dict[str, int] = {
     "ecdsa": 128,
     "mldsa65": 192,
     "falcon1024": 256,
+    "dilithium": 128,    # default; bump to 192/256 when you pin which level you benchmark
     "randao": 128,       # placeholder until threat model finalization
     "attestation": 128,  # placeholder until threat model finalization
 }
+
 
 # Human-facing blocker hints keyed by dependency prefix
 BLOCKER_HINTS = [
@@ -59,7 +66,7 @@ def _as_int(x: Any) -> Optional[int]:
     try:
         if isinstance(x, bool):
             return int(x)
-        if isinstance(x, (int,)):
+        if isinstance(x, int):
             return int(x)
         if isinstance(x, float):
             return int(x)
@@ -69,12 +76,22 @@ def _as_int(x: Any) -> Optional[int]:
         return None
 
 
+def _as_str(x: Any) -> Optional[str]:
+    if x is None:
+        return None
+    try:
+        s = str(x)
+        return s
+    except Exception:
+        return None
+
+
 @dataclass
 class Record:
     rid: str                      # canonical id, e.g. "falcon1024::qa_handleOps_userop_foundry"
     category: str                 # usually equals scheme
     gas: Optional[int]            # gas_verify or gas_surface
-    security_equiv_bits: Optional[int]      # numerator/denominator bits depending on metric
+    security_equiv_bits: Optional[int]      # denominator bits depending on metric
     effective_security_bits: Optional[int]  # if explicitly present (rare)
     depends_on: List[str]
     ts: str
@@ -82,17 +99,22 @@ class Record:
 
     @staticmethod
     def canonical_rid(obj: Dict[str, Any]) -> Optional[str]:
-        # Prefer explicit identifiers if present
-        rid = obj.get("id") or obj.get("name") or obj.get("bench_id") or obj.get("surface")
-        if rid:
-            return str(rid)
-
+        """
+        Canonical ID policy:
+        1) Prefer scheme::bench_name (this is the repo's declared canonical id)
+        2) Then fallback to explicit ids (id/name/bench_id)
+        3) Then fallback to bench_name alone
+        IMPORTANT: do NOT use "surface" as id (collides).
+        """
         scheme = obj.get("scheme") or obj.get("category")
-        bench_name = obj.get("bench_name")
+        bench_name = obj.get("bench_name") or obj.get("bench")
         if scheme and bench_name:
             return f"{scheme}::{bench_name}"
 
-        # last-resort fallback
+        rid = obj.get("id") or obj.get("name") or obj.get("bench_id")
+        if rid:
+            return str(rid)
+
         if bench_name:
             return str(bench_name)
 
@@ -107,15 +129,14 @@ class Record:
             if b is not None:
                 return b
 
-        # Canonical metric representation
         smt = obj.get("security_metric_type")
         smv = obj.get("security_metric_value")
 
-        # We accept H_min (entropy denominator placeholder), security_equiv_bits, lambda_eff, and generic bits
+        # Accept common types
         if smv is not None and smt in (None, "", "lambda_eff", "security_equiv_bits", "H_min", "bits", "security_bits"):
             return _as_int(smv)
 
-        # If security_metric_type is unknown, still try to parse numeric value conservatively
+        # Unknown type: still try to parse numeric value conservatively
         if smv is not None and smt:
             return _as_int(smv)
 
@@ -175,7 +196,10 @@ def load_latest_records(jsonl_path: Path) -> Dict[str, Record]:
             line = line.strip()
             if not line:
                 continue
-            obj = json.loads(line)
+            try:
+                obj = json.loads(line)
+            except Exception:
+                continue
 
             try:
                 r = Record.from_json(obj)
@@ -187,14 +211,17 @@ def load_latest_records(jsonl_path: Path) -> Dict[str, Record]:
             prev = latest.get(r.rid)
             if prev is None:
                 latest[r.rid] = (ts, i, r)
-            else:
-                prev_ts, prev_i, _ = prev
-                if ts and prev_ts and ts > prev_ts:
-                    latest[r.rid] = (ts, i, r)
-                elif ts and not prev_ts:
-                    latest[r.rid] = (ts, i, r)
-                elif (ts == prev_ts and i > prev_i) or (not ts and not prev_ts and i > prev_i):
-                    latest[r.rid] = (ts, i, r)
+                continue
+
+            prev_ts, prev_i, _ = prev
+
+            # Prefer later ts if comparable; otherwise fallback to later line index
+            if ts and prev_ts and ts > prev_ts:
+                latest[r.rid] = (ts, i, r)
+            elif ts and not prev_ts:
+                latest[r.rid] = (ts, i, r)
+            elif (ts == prev_ts and i > prev_i) or (not ts and not prev_ts and i > prev_i):
+                latest[r.rid] = (ts, i, r)
 
     return {rid: rec for rid, (_, __, rec) in latest.items()}
 
@@ -244,13 +271,14 @@ def find_cap_reason(r: Record, eff_map: Dict[str, int]) -> Optional[str]:
     """
     If effective bits are lower than the record's own bits, find which dependency causes the cap.
     """
-    own = r.security_equiv_bits if r.security_equiv_bits is not None else r.effective_security_bits
+    own = r.effective_security_bits if r.effective_security_bits is not None else r.security_equiv_bits
     if own is None:
         return None
     eff = eff_map.get(r.rid, 0)
     if eff >= int(own):
         return None
-    # find a dep that matches the cap
+
+    # Find a dependency whose effective bits matches the cap
     for dep in r.depends_on:
         if eff_map.get(dep, 0) == eff:
             return dep
@@ -297,9 +325,19 @@ def main() -> None:
 
     for _, r in rows:
         eff = eff_map.get(r.rid, 0)
+
+        own = r.effective_security_bits if r.effective_security_bits is not None else r.security_equiv_bits
+        own_i = int(own) if own is not None else 0
+
+        # Display-only target:
+        # - prefer map; if missing/0 => fallback to max(own, eff) so we never print 0.
         target = DEFAULT_TARGET_BITS_BY_CATEGORY.get(r.category, 0)
+        if not target:
+            target = max(own_i, int(eff))
+
         cap_dep = find_cap_reason(r, eff_map)
         blocker = blocker_text(cap_dep) if cap_dep else ""
+
         lines.append(
             f"| {r.category} | `{r.rid}` | {fmt_int(r.gas)} | {eff} | {target} | {cap_dep or '-'} | {blocker} |"
         )
@@ -308,6 +346,7 @@ def main() -> None:
     lines.append("Notes:")
     lines.append("- `effective_security_bits` is conservative: it never exceeds the weakest dependency in `depends_on`.")
     lines.append("- `H_min` surfaces are currently placeholders until the threat model is finalized (gas is measured).")
+    lines.append("- `Target (bits)` is display-only: if a category is unknown, target falls back to `max(own_bits, effective_bits)`.")
     lines.append("")
 
     OUT_MD.write_text("\n".join(lines), encoding="utf-8")

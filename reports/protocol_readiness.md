@@ -10,15 +10,15 @@ python3 scripts/make_protocol_readiness.py
 | Category | Surface | Gas | effective_security_bits | Target (bits) | Capped by | Blocker |
 |---|---|---:|---:|---:|---|---|
 | attestation | `attestation::relay_attestation_surface` | 12457 | 128 | 128 | - |  |
-| dilithium | `dilithium::dilithium_verify_nistkat` | 20161676 | 128 | 0 | - |  |
-| dilithium | `dilithium::ethdilithium_verify_evmfriendly` | 13495423 | 128 | 0 | - |  |
+| dilithium | `dilithium::dilithium_verify_nistkat` | 20161676 | 128 | 128 | - |  |
+| dilithium | `dilithium::ethdilithium_verify_evmfriendly` | 13495423 | 128 | 128 | - |  |
 | ecdsa | `ecdsa::ecdsa_erc1271_isValidSignature_foundry` | 21413 | 128 | 128 | - |  |
 | ecdsa | `ecdsa::ecdsa_verify_bytes65_foundry` | 24032 | 128 | 128 | - |  |
 | ecdsa | `ecdsa::ecdsa_verify_ecrecover_foundry` | 21126 | 128 | 128 | - |  |
 | ecdsa | `ecdsa::l1_envelope_assumption` | 0 | 128 | 128 | - |  |
-| entropy | `entropy::randao_hash_based_assumption` | 0 | 128 | 0 | - |  |
-| falcon | `falcon::falcon_getUserOpHash_via_entry` | 218333 | 256 | 0 | - |  |
-| falcon | `falcon::falcon_handleOps_userOp_e2e` | 10966076 | 256 | 0 | - |  |
+| entropy | `entropy::randao_hash_based_assumption` | 0 | 128 | 128 | - |  |
+| falcon | `falcon::falcon_getUserOpHash_via_entry` | 218333 | 256 | 256 | - |  |
+| falcon | `falcon::falcon_handleOps_userOp_e2e` | 10966076 | 256 | 256 | - |  |
 | falcon1024 | `falcon1024::falcon_verifySignature_log` | 10336055 | 256 | 256 | - |  |
 | falcon1024 | `falcon1024::qa_getUserOpHash_foundry` | 218333 | 256 | 256 | - |  |
 | falcon1024 | `falcon1024::qa_handleOps_userop_foundry` | 10966076 | 256 | 256 | - |  |
@@ -30,11 +30,12 @@ python3 scripts/make_protocol_readiness.py
 | mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho1_log` | 1499354 | 128 | 192 | - |  |
 | mldsa65 | `mldsa65::verify_poc_foundry` | 68901612 | 128 | 192 | - |  |
 | randao | `randao::l1_randao_mix_surface` | 5993 | 32 | 128 | - |  |
-| vrf_pq | `vrf_pq::pq_vrf_target_assumption` | 0 | 192 | 0 | - |  |
+| vrf_pq | `vrf_pq::pq_vrf_target_assumption` | 0 | 192 | 192 | - |  |
 
 Notes:
 - `effective_security_bits` is conservative: it never exceeds the weakest dependency in `depends_on`.
 - `H_min` surfaces are currently placeholders until the threat model is finalized (gas is measured).
+- `Target (bits)` is display-only: if a category is unknown, target falls back to `max(own_bits, effective_bits)`.
 
 <!-- MLDSA65_VENDOR_BEGIN -->
 ## ML-DSA-65 (vendor / pinned ref) — measured points
