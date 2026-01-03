@@ -27,6 +27,7 @@
 - [Dataset Schema (CSV)](#dataset-schema-csv)
 - [Security Normalization (Explicit Assumptions)](#security-normalization-explicit-assumptions)
 - [Quick Start](#quick-start)
+- [Vendor benchmarks (pinned refs)](#vendor-benchmarks-pinned-refs)
 - [Benchmarks Included](#benchmarks-included)
 - [Related Work / References](#related-work--references)
 - [Roadmap](#roadmap)
@@ -93,11 +94,8 @@ This allows apples-to-apples comparisons across schemes at different security ta
 ## Public Review Entry Points
 
 If you have 10 minutes:
-### Public Review Entry Points
 
-If you have 10 minutes:
-
-1. [reports/protocol_readiness.md](reports/protocol_readiness.md) — protocol constraints and why “gas/verify” can be misleading.
+1. [reports/protocol_readiness.md](reports/protocol_readiness.md) — protocol constraints and why "gas/verify" can be misleading.
 2. [spec/case_catalog.md](spec/case_catalog.md) + [spec/case_graph.md](spec/case_graph.md) — AA weakest-link (envelope dominance) cases + canonical graphs.
 3. [spec/gas_per_secure_bit.md](spec/gas_per_secure_bit.md) — definitions, normalization rules, reporting conventions.
 4. [data/results.jsonl](data/results.jsonl) — canonical dataset (CSV + reports are deterministically rebuilt from it).
@@ -129,20 +127,16 @@ Besides single-bench gas numbers, this repo also models **end-to-end PQ readines
 - **Entropy / attestation surfaces:** measured protocol surfaces (RANDAO, relay attestation) with `H_min` denominators.
 
 Reports:
-Reports:
 - [`reports/weakest_link_report.md`](reports/weakest_link_report.md)
 - [`reports/protocol_readiness.md`](reports/protocol_readiness.md)
 - [`reports/entropy_surface_notes.md`](reports/entropy_surface_notes.md)
 
----
-## Weakest-link composition (why normalization matters)
-=======
 ### Weakest-link composition (why normalization matters)
 
-See: spec/weakest_link.mmd
-=======
 - Mermaid diagram: [`spec/weakest_link.mmd`](spec/weakest_link.mmd)
 - Example (Falcon Cat5 bounded by ECDSA envelope): [`spec/weakest_link_falcon_ecdsa.mmd`](spec/weakest_link_falcon_ecdsa.mmd)
+
+---
 
 ## Reproducible Reports & Data Policy
 
@@ -165,16 +159,14 @@ The following files are **derived deterministically** and **must not be edited b
 - `docs/gas_per_secure_bit.svg`
 - `docs/gas_per_secure_bit_big.svg`
 
-Charts are derived from `data/results.csv` and must not be edited by hand.
-
-They are rebuilt from `data/results.jsonl`.
+Charts are derived from `data/results.csv` and must not be edited by hand. They are rebuilt from `data/results.jsonl`.
 
 ### Canonical Pipeline
 
 To regenerate all derived files locally:
 
 ```bash
-./scripts/make_reports.sh
+bash scripts/make_reports.sh
 ```
 
 This script will:
@@ -184,8 +176,10 @@ This script will:
 4. Generate all reports (including protocol readiness)
 
 **Pipeline roles:**
-- `scripts/parse_bench.py` — appends records to `data/results.jsonl` (ingestion)
-- `scripts/rebuild_results_csv.py` — deterministically generates CSV + derived reports (invoked by `./scripts/make_reports.sh`)
+- `scripts/parse_bench.py` — ingestion + `--regen` rebuilds `data/results.csv` from `data/results.jsonl`
+- `scripts/make_reports.sh` — runs sanity checks + regenerates all reports
+- `scripts/make_protocol_readiness.py` — generates `reports/protocol_readiness.md`
+- `scripts/patch_protocol_readiness_*.py` — inject vendor pinned-ref blocks (ML-DSA / Falcon / Dilithium)
 
 ### CI Enforcement
 
@@ -246,7 +240,7 @@ See also:
 
 ## Current Dataset (EVM/L1) — Gas Snapshots
 
-**Source of truth:** `data/results.jsonl` (CSV is deterministically rebuilt by `scripts/rebuild_results_csv.py` via `./scripts/make_reports.sh`).
+**Source of truth:** `data/results.jsonl` (CSV is deterministically rebuilt by `scripts/parse_bench.py --regen` via `./scripts/make_reports.sh`).
 
 ### Signature & AA Benchmarks
 
@@ -272,6 +266,8 @@ See also:
 
 **Note:** Protocol surfaces use `security_metric_type=H_min`; the current H_min values are declared placeholders until the threat model is pinned down. Gas numbers are measured; denominators are provisional. For surfaces, `gas_verify` denotes the measured gas of the surface operation/harness.
 
+**Dataset currently stores ML-DSA rows as `lambda_eff=128`; the 192-bit normalization is shown in reports vendor block / notes.**
+
 **Notes:**
 - `qa_handleOps_userop_foundry` includes the full EIP-4337 pipeline (`EntryPoint.handleOps`), so it is **not** a "pure signature verify" cost.
 - `falcon_verifySignature_log` is a **clean verifySignature-only** microbench extracted from QuantumAccount logs.
@@ -287,10 +283,11 @@ A reproducible benchmark lab with:
 - Canonical dataset: `data/results.jsonl` (source of truth)
 - Derived table: `data/results.csv`
 - Schema/spec documents under `spec/`
-- `scripts/rebuild_results_csv.py` deterministically rebuilds `data/results.csv` from `data/results.jsonl` (invoked by `./scripts/make_reports.sh`)
+- `scripts/parse_bench.py --regen` deterministically rebuilds `data/results.csv` from `data/results.jsonl`
 
 ### Runners (Reproducible Ingestion)
 - `scripts/run_vendor_mldsa.sh` — ML-DSA-65 (Foundry gas + log extraction for PreA)
+- `scripts/run_vendor_dilithium_ethdilithium.sh` — Dilithium (ZKNoxHQ/ETHDILITHIUM) benches
 - `scripts/run_vendor_quantumaccount.sh` — QuantumAccount (Falcon) benches + log-based gas extraction
 - `scripts/run_ecdsa.sh` — ECDSA baselines (ecrecover, bytes65 wrapper, ERC-1271)
 - `scripts/run_protocol_surfaces.sh` — measures protocol surfaces gas (RANDAO mix + relay attestation), replaces old records, regenerates reports
@@ -345,6 +342,13 @@ Right now (signature dataset) we primarily use:
 For protocol surfaces:
 - `security_metric_type = H_min`
 - `security_metric_value` = declared min-entropy placeholder
+
+### Provenance (important)
+
+- In `data/results.jsonl`, `provenance` is a nested JSON object, e.g.:
+  `{"repo":"ZKNoxHQ/ETHDILITHIUM","commit":"...","path":"vendor/ETHDILITHIUM"}`.
+- In `data/results.csv`, `provenance` is stored as a **JSON string** (CSV-escaped quotes).
+  This is intentional: it stays parseable by standard CSV tooling + `json.loads()`.
 
 ---
 
@@ -404,7 +408,7 @@ RESET_DATA=0 MLDSA_REF="feature/mldsa-ntt-opt-phase12-erc7913-packedA" ./scripts
 QA_REF=main RESET_DATA=0 ./scripts/run_vendor_quantumaccount.sh
 
 # Regenerate derived artifacts (CSV + reports)
-./scripts/make_reports.sh
+bash scripts/make_reports.sh
 
 wc -l data/results.jsonl data/results.csv
 tail -n 20 data/results.csv
@@ -433,8 +437,29 @@ PY
 ### Generate Reports
 
 ```bash
-./scripts/make_reports.sh
+bash scripts/make_reports.sh
 ls -la reports/
+```
+
+---
+
+## Vendor benchmarks (pinned refs)
+
+Vendor runners append measurements into `data/results.jsonl` with explicit provenance, then regenerate reports.
+
+```bash
+# ML-DSA-65
+export MLDSA_REF=feature/mldsa-ntt-opt-phase12-erc7913-packedA
+bash scripts/run_vendor_mldsa.sh
+
+# Dilithium (ZKNoxHQ/ETHDILITHIUM)
+bash scripts/run_vendor_dilithium_ethdilithium.sh
+
+# Falcon / QuantumAccount
+bash scripts/run_vendor_quantumaccount.sh
+
+# Rebuild CSV + reports
+bash scripts/make_reports.sh
 ```
 
 ---
@@ -449,6 +474,15 @@ ls -la reports/
 - `ecdsa_verify_ecrecover_foundry`
 - `ecdsa_verify_bytes65_foundry`
 - `ecdsa_erc1271_isValidSignature_foundry`
+
+### Dilithium (vendor: ZKNoxHQ/ETHDILITHIUM)
+Ingested benches (EVM/L1 gas snapshots from the vendor repo):
+
+- `dilithium_verify_nistkat` — NIST-shape Dilithium verify (baseline, "spec-shaped" implementation).
+- `ethdilithium_verify_evmfriendly` — EVM-friendly Dilithium verify variant (optimized for EVM constraints).
+
+Runner:
+- `scripts/run_vendor_dilithium_ethdilithium.sh`
 
 ### Falcon / QuantumAccount (vendor + local copy)
 Ingested benches:
@@ -539,15 +573,16 @@ https://github.com/pipavlo82/gas-per-secure-bit
 
 For reproducibility, cite a tag or commit hash.
 
+---
 
 ## PQ aggregation surfaces (BLS → PQ) — why this matters
 
-Ethereum’s BLS aggregation provides scalability via algebraic structure, but practical verification still includes
+Ethereum's BLS aggregation provides scalability via algebraic structure, but practical verification still includes
 linear work to reconstruct aggregate public keys from participation bitfields. Post-quantum signature families lose
 this algebraic aggregation property, pushing the system toward **proof-based aggregation** (recursive SNARKs or
 folding / accumulation schemes).
 
-As a result, “gas per verify” alone is insufficient: engineering decisions require **surface-aware, security-normalized**
+As a result, "gas per verify" alone is insufficient: engineering decisions require **surface-aware, security-normalized**
 benchmarks across L1/L2/AA verification surfaces and, eventually, PQ aggregation proof verification surfaces.
 
 See: [spec/pq_signature_aggregation_context.md](spec/pq_signature_aggregation_context.md)
