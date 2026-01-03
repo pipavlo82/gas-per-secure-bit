@@ -14,6 +14,12 @@ Account Abstraction user operation authentication surfaces (e.g., validateUserOp
 
 ### ERC1271_contract_verify
 EIP-1271 style contract verification paths (contract-based signature checks).
+### Signature surfaces (interfaces)
+
+- **sig::protocol** — protocol-level signature interface / precompile surface.
+  - Intended for “enshrined” or protocol-facing verification (e.g., precompile or consensus-level signature interface).
+  - This is distinct from app-facing adapters (ERC-7913) and contract-wallet surfaces (ERC-1271).
+  - Use when the measured gas corresponds to a protocol-facing verifier boundary rather than an application contract boundary.
 
 ### PQ_verify_onchain
 On-chain verification primitives for post-quantum signatures (e.g., ML-DSA, Falcon).

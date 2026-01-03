@@ -79,6 +79,7 @@ Represents pure on-chain PQ verification primitive cost, without protocol envelo
 ### Canonical surfaces (summary)
 
 - **S0:** Pure signature verify (verifySignature / verify())
+- **S0p:** Protocol-level signature interface / precompile (protocol-facing verify boundary)
 - **S1:** Contract wallet interface (ERC-1271 isValidSignature)
 - **S2:** AA validation (validateUserOp)
 - **S3:** AA end-to-end (EntryPoint.handleOps)
