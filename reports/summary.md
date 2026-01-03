@@ -5,7 +5,7 @@ Generated artifacts in this repo:
 - `data/results.csv` (derived table)
 - `reports/weakest_link_report.md` (computed)
 - `reports/entropy_surface_notes.md` (notes / framing)
-- `reports/protocol_readiness.md` (human-written summary)
+- `reports/protocol_readiness.md` (generated)
 
 ---
 ## Executive summary (what exists today)
