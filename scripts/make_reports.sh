@@ -60,11 +60,19 @@ fi
 
 echo "[5/5] Generate protocol readiness"
 python3 scripts/make_protocol_readiness.py
+
 # Post-process: inject ML-DSA-65 vendor measurements (pinned ref)
 if test -f scripts/patch_protocol_readiness_mldsa.py; then
   python3 scripts/patch_protocol_readiness_mldsa.py data/results.jsonl reports/protocol_readiness.md
 else
   echo "WARN: scripts/patch_protocol_readiness_mldsa.py not found; skipping"
+fi
+
+# Post-process: inject Falcon vendor measurements (pinned ref)
+if test -f scripts/patch_protocol_readiness_falcon.py; then
+  python3 scripts/patch_protocol_readiness_falcon.py data/results.jsonl reports/protocol_readiness.md
+else
+  echo "WARN: scripts/patch_protocol_readiness_falcon.py not found; skipping"
 fi
 
 echo "Done."

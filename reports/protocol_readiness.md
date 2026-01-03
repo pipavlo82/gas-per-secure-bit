@@ -15,6 +15,8 @@ python3 scripts/make_protocol_readiness.py
 | ecdsa | `ecdsa::ecdsa_verify_ecrecover_foundry` | 21126 | 128 | 128 | - |  |
 | ecdsa | `ecdsa::l1_envelope_assumption` | 0 | 128 | 128 | - |  |
 | entropy | `entropy::randao_hash_based_assumption` | 0 | 128 | 0 | - |  |
+| falcon | `falcon::falcon_getUserOpHash_via_entry` | 218333 | 256 | 0 | - |  |
+| falcon | `falcon::falcon_handleOps_userOp_e2e` | 10966076 | 256 | 0 | - |  |
 | falcon1024 | `falcon1024::falcon_verifySignature_log` | 10336055 | 256 | 256 | - |  |
 | falcon1024 | `falcon1024::qa_getUserOpHash_foundry` | 218333 | 256 | 256 | - |  |
 | falcon1024 | `falcon1024::qa_handleOps_userop_foundry` | 10966076 | 256 | 256 | - |  |
@@ -53,3 +55,17 @@ bash scripts/make_reports.sh
 | `preA_compute_w_fromPackedA_ntt_rho0_log` | 1,499,354 | `lambda_eff` | 128 | 11,713.703125 | `d9aabc14cf13` | sec192=192 gpb192=7,809.135417 | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle=gas_compute_w_fr... |
 | `preA_compute_w_fromPackedA_ntt_rho1_log` | 1,499,354 | `lambda_eff` | 128 | 11,713.703125 | `d9aabc14cf13` | sec192=192 gpb192=7,809.135417 | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle=gas_compute_w_fr... |
 <!-- MLDSA65_VENDOR_END -->
+
+<!-- FALCON_VENDOR_BEGIN -->
+### Falcon vendor (QuantumAccount) — pinned ref
+
+| bench | gas | security_metric | bits | gas/bit | repo@commit | security_model | notes |
+|---|---:|---|---:|---:|---|---|---|
+| `falcon_getUserOpHash_via_entry` | 218,333 | `security_equiv_bits` | 256 | 852.86328125 | `QuantumAccount`@`1970dcad8907` | `standalone` | sec256=256 gpb256=852.86328125 |
+| `falcon_handleOps_userOp_e2e` | 10,966,076 | `security_equiv_bits` | 256 | 42836.234375 | `QuantumAccount`@`1970dcad8907` | `weakest-link` | sec256=256 gpb256=42836.234375 weakest_link=erc4337_bundler_ecdsa eff128=128 gpb_eff=85672.46875 |
+
+Notes:
+- `falcon_getUserOpHash_via_entry` measures the EntryPoint hashing surface (not end-to-end AA execution).
+- `falcon_handleOps_userOp_e2e` measures an end-to-end `handleOps()` flow, including ERC-4337 surface overhead; treat as a protocol-surface upper bound.
+- Normalization in this repo uses `security_equiv_bits = 256` for Falcon-1024 (Cat5-style denominator).
+<!-- FALCON_VENDOR_END -->
