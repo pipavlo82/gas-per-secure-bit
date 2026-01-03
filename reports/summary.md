@@ -99,6 +99,34 @@ We consolidated the above into a readable "protocol readiness" view:
 This is *not* a new benchmark; it is a structured summary of what the dataset + weakest-link model implies about end-to-end PQ readiness.
 
 ---
+---
+
+## Latest measured points (selected)
+
+Concrete datapoints currently present in `data/results.jsonl` (source of truth).
+
+### ML-DSA-65 (FIPS-204 shape) — vendor bench (Foundry)
+
+Recorded from vendored `pipavlo82/ml-dsa-65-ethereum-verification` at:
+- ref: `feature/mldsa-ntt-opt-phase12-erc7913-packedA`
+- commit: `d9aabc14cf13fc227c46d06cdaef17f74b069790`
+
+Numbers (EVM/L1):
+- `mldsa65::verify_poc_foundry` → gas_verify = 68,901,612; gas_per_secure_bit (lambda_eff=128) = 538,293.84375
+- `mldsa65::preA_compute_w_fromPackedA_ntt_rho0_log` → gas_verify = 1,499,354; gas_per_secure_bit = 11,713.703125
+- `mldsa65::preA_compute_w_fromPackedA_ntt_rho1_log` → gas_verify = 1,499,354; gas_per_secure_bit = 11,713.703125
+
+Note: vendor `main` may not contain the gas harness tests (`test_verify_gas_poc`, `PreA_ComputeW_GasMicro`).
+Until merged upstream, pin the ref explicitly.
+
+### Reproduce the ML-DSA-65 vendor points
+
+From repo root:
+
+```bash
+export MLDSA_REF=feature/mldsa-ntt-opt-phase12-erc7913-packedA
+bash scripts/run_vendor_mldsa.sh
+bash scripts/make_reports.sh
 
 ## Current Dataset Coverage (high level)
 
