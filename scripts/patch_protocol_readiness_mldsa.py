@@ -10,11 +10,9 @@ END   = "<!-- MLDSA65_VENDOR_END -->"
 TARGET_SCHEME = "mldsa65"
 TARGET_REPO_SUBSTR = "ml-dsa-65-ethereum-verification"
 
-# ML-DSA-65 is commonly treated as Cat3 (≈192-bit security-equivalent).
-# We keep the table as-is (denom/value from dataset, currently lambda_eff=128),
-# but we also show gas/bit normalized by 192 in the notes so future Cat3 reporting
-# doesn't require redesign/rewrite.
-SECURITY_EQUIV_BITS = 192.0
+# "Real" ML-DSA-65 security-equivalent bits (Cat3) — keep it here so we
+# don’t have to rewrite the table later when dataset flips denom types.
+SEC_EQ_BITS = 192.0
 
 BENCHES = [
     "verify_poc_foundry",
@@ -42,6 +40,7 @@ def pick_latest(rows: List[Dict[str, Any]], bench: str) -> Optional[Dict[str, An
         if TARGET_REPO_SUBSTR not in repo:
             continue
 
+        # must be a real measurement
         gv = r.get("gas_verify")
         try:
             if int(gv) <= 0:
@@ -70,6 +69,12 @@ def fmt_float(x: Any) -> str:
     except Exception:
         return str(x)
 
+def safe_notes(s: str, max_len: int = 140) -> str:
+    s = (s or "").replace("\n", " ").strip()
+    if len(s) > max_len:
+        return s[: max_len - 3] + "..."
+    return s
+
 def render_section(rows: List[Dict[str, Any]]) -> str:
     latest = {b: pick_latest(rows, b) for b in BENCHES}
 
@@ -85,7 +90,7 @@ def render_section(rows: List[Dict[str, Any]]) -> str:
     lines.append(
         "Note: the dataset currently records ML-DSA-65 rows with `security_metric_type=lambda_eff` and `value=128`. "
         "To avoid rewriting later, the table keeps that denominator, and `notes` additionally reports "
-        f"`security_equiv_bits=192` and `gas/bit@192` (= gas_verify/192)."
+        f"`security_equiv_bits={int(SEC_EQ_BITS)}` and `gas/bit@{int(SEC_EQ_BITS)}` (= gas_verify/{int(SEC_EQ_BITS)})."
     )
     lines.append("")
     lines.append("Reproduce:")
@@ -97,7 +102,7 @@ def render_section(rows: List[Dict[str, Any]]) -> str:
     lines.append("```")
     lines.append("")
 
-    # Table (keep shape stable)
+    # Table (unchanged columns)
     lines.append("| bench | gas_verify | denom | value | gas/bit | vendor commit | notes |")
     lines.append("|---|---:|---|---:|---:|---|---|")
 
@@ -107,34 +112,23 @@ def render_section(rows: List[Dict[str, Any]]) -> str:
             lines.append(f"| `{b}` | *(missing)* |  |  |  |  |  |")
             continue
 
-        gv_raw = r.get("gas_verify")
-        gas = fmt_int(gv_raw)
+        gas_i = int(r.get("gas_verify"))
+        gas = fmt_int(gas_i)
 
         denom_t = str(r.get("security_metric_type", ""))
         denom_v = fmt_float(r.get("security_metric_value"))
         gpb = fmt_float(r.get("gas_per_secure_bit"))
+
+        gpb192 = fmt_float(gas_i / SEC_EQ_BITS)
 
         prov = r.get("provenance") or {}
         vcommit = str(prov.get("commit") or r.get("commit") or "")
         if len(vcommit) > 12:
             vcommit = vcommit[:12]
 
-        # Notes: keep original, but append Cat3-normalized view without changing table layout
-        notes = str(r.get("notes", "")).replace("\n", " ").strip()
-
-        gpb_192 = ""
-        try:
-            gv_i = int(gv_raw)
-            gpb_192 = fmt_float(gv_i / SECURITY_EQUIV_BITS)
-        except Exception:
-            gpb_192 = ""
-
-        if gpb_192:
-            suffix = f" | security_equiv_bits=192; gas/bit@192={gpb_192}"
-            notes = (notes + suffix).strip()
-
-        if len(notes) > 120:
-            notes = notes[:117] + "..."
+        base_notes = safe_notes(str(r.get("notes", "")), max_len=110)
+        # Put sec192 + gas/bit@192 early so it survives truncation.
+        notes = f"sec192={int(SEC_EQ_BITS)} gpb192={gpb192} | {base_notes}"
 
         lines.append(
             f"| `{b}` | {gas} | `{denom_t}` | {denom_v} | {gpb} | `{vcommit}` | {notes} |"
@@ -144,16 +138,49 @@ def render_section(rows: List[Dict[str, Any]]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 def upsert_block(doc: str, block: str) -> str:
+    """
+    Robustly ensure exactly ONE vendor block exists.
+
+    Cases handled:
+      - BEGIN present but END missing  -> replace from BEGIN to EOF
+      - multiple BEGIN/END             -> replace from first BEGIN to last END
+      - neither present                -> append block at EOF
+    """
     block_wrapped = f"{BEGIN}\n{block}{END}\n"
-    if BEGIN in doc and END in doc:
-        pre = doc.split(BEGIN)[0]
-        post = doc.split(END)[1]
-        pre = pre.rstrip() + "\n\n"
-        post = post.lstrip()
-        return pre + block_wrapped + "\n" + post
-    else:
-        doc = doc.rstrip() + "\n\n"
-        return doc + block_wrapped
+
+    bcount = doc.count(BEGIN)
+    ecount = doc.count(END)
+
+    if bcount == 0 and ecount == 0:
+        return doc.rstrip() + "\n\n" + block_wrapped
+
+    if bcount >= 1 and ecount == 0:
+        # dangling BEGIN: replace from first BEGIN to end-of-file
+        b = doc.find(BEGIN)
+        pre = doc[:b].rstrip() + "\n\n"
+        return pre + block_wrapped
+
+    if bcount == 0 and ecount >= 1:
+        # dangling END (rare): remove all END markers and append clean block
+        cleaned = doc.replace(END, "").rstrip()
+        return cleaned + "\n\n" + block_wrapped
+
+    # both present (possibly multiple)
+    b = doc.find(BEGIN)
+    e = doc.rfind(END)
+    if e < b:
+        # malformed ordering; fall back to append after cleaning all markers
+        cleaned = doc.replace(BEGIN, "").replace(END, "").rstrip()
+        return cleaned + "\n\n" + block_wrapped
+
+    e_end = e + len(END)
+    pre = doc[:b].rstrip() + "\n\n"
+    post = doc[e_end:].lstrip()
+
+    out = pre + block_wrapped
+    if post:
+        out += "\n" + post
+    return out
 
 def main() -> int:
     if len(sys.argv) != 3:
