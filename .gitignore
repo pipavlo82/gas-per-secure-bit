@@ -29,3 +29,6 @@ vendors/
 
 # local scratch
 bench/quantumaccount/
+
+.tmp/
+vendor/
