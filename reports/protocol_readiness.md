@@ -9,7 +9,8 @@ python3 scripts/make_protocol_readiness.py
 
 | Category | Surface | Gas | effective_security_bits | Target (bits) | Capped by | Blocker |
 |---|---|---:|---:|---:|---|---|
-| attestation | `attestation::relay_attestation_surface` | 12457 | 128 | 128 | - |  |
+| attestation | `attestation::relay_attestation_surface` | 43876 | 128 | 128 | - |  |
+| das | `das::verify_sample_512b_surface` | 2464 | 4096 | 4096 | - |  |
 | dilithium | `dilithium::dilithium_verify_nistkat` | 20161676 | 128 | 128 | - |  |
 | dilithium | `dilithium::ethdilithium_verify_evmfriendly` | 13495423 | 128 | 128 | - |  |
 | ecdsa | `ecdsa::ecdsa_erc1271_isValidSignature_foundry` | 21413 | 128 | 128 | - |  |
@@ -26,7 +27,8 @@ python3 scripts/make_protocol_readiness.py
 | mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho0_log` | 1499354 | 128 | 192 | - |  |
 | mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho1_log` | 1499354 | 128 | 192 | - |  |
 | mldsa65 | `mldsa65::verify_poc_foundry` | 68901612 | 128 | 192 | - |  |
-| randao | `randao::l1_randao_mix_surface` | 5993 | 32 | 128 | - |  |
+| randao | `randao::l1_randao_mix_surface` | 5820 | 32 | 128 | - |  |
+| randao | `randao::mix_for_sample_selection_surface` | 13081 | 32 | 128 | - |  |
 | vrf_pq | `vrf_pq::pq_vrf_target_assumption` | 0 | 192 | 192 | - |  |
 
 Notes:
