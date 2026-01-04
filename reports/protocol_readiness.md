@@ -69,7 +69,7 @@ bash scripts/make_reports.sh
 | `falcon_verifySignature_log` | 10,336,055 | `security_equiv_bits` | 256 | 40375.21484375 | `QuantumAccount`@`1970dcad890` | `raw` | log-isolated; Foundry logs: test_falcon_verify_gas_log => 'gas_falcon_verify: <N>' |
 | `qa_validateUserOp_userop_log` | 10,589,132 | `security_equiv_bits` | 256 | 41363.796875 | `QuantumAccount`@`1970dcad890` | `raw` | log-isolated; Foundry logs: test_validateUserOp_gas_log => 'gas_validateUserOp: <N>' |
 | `falcon_getUserOpHash_via_entry` | 218,333 | `security_equiv_bits` | 256 | 852.86328125 | `QuantumAccount`@`1970dcad890` | `standalone` | AA surface: EntryPoint hashing only (not end-to-end AA execution) |
-| `falcon_handleOps_userOp_e2e` | 10,966,076 | `security_equiv_bits` | 256 | 42836.234375 | `QuantumAccount`@`1970dcad890` | `weakest-link` | end-to-end AA (`handleOps`); treat as protocol-surface upper bound |
+| `falcon_handleOps_userOp_e2e` | 10,966,076 | `security_equiv_bits` | 256 | 42836.234375 | `QuantumAccount`@`1970dcad890` | `weakest-link` | end-to-end AA (`handleOps`); treat as protocol-surface upper bound; weakest-link=ecdsa::l1_envelope_assumption eff128=128 gpb_eff=85672.46875 |
 
 Notes:
 - Vendor is pinned by commit in dataset: `QuantumAccount`@`1970dcad890`.

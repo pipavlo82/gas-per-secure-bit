@@ -78,7 +78,15 @@ def _build_block(picked: dict[str, Dict[str, Any]]) -> str:
     commit_short = commit_full[:11] if commit_full else ""
     repo_at = f"`{repo}`@`{commit_short}`" if commit_short else f"`{repo}`"
 
-    def note_for(bn: str) -> str:
+    def _extract(notes: Any, key: str) -> str:
+        if not isinstance(notes, str):
+            return ""
+        for part in notes.split():
+            if part.startswith(key + "="):
+                return part.split("=", 1)[1]
+        return ""
+
+    def note_for(bn: str, r: Dict[str, Any]) -> str:
         if bn == "falcon_verifySignature_log":
             return "log-isolated; Foundry logs: test_falcon_verify_gas_log => 'gas_falcon_verify: <N>'"
         if bn == "qa_validateUserOp_userop_log":
@@ -86,7 +94,24 @@ def _build_block(picked: dict[str, Dict[str, Any]]) -> str:
         if bn == "falcon_getUserOpHash_via_entry":
             return "AA surface: EntryPoint hashing only (not end-to-end AA execution)"
         if bn == "falcon_handleOps_userOp_e2e":
-            return "end-to-end AA (`handleOps`); treat as protocol-surface upper bound"
+            base = "end-to-end AA (`handleOps`); treat as protocol-surface upper bound"
+            dep = r.get("depends_on") or ""
+            if isinstance(dep, list):
+                dep = dep[0] if dep else ""
+            notes = r.get("notes")
+            wl = _extract(notes, "weakest_link") or str(dep) or ""
+            eff = _extract(notes, "eff128")
+            gpb_eff = _extract(notes, "gpb_eff")
+            extra = []
+            if wl:
+                extra.append(f"weakest-link={wl}")
+            if eff:
+                extra.append(f"eff128={eff}")
+            if gpb_eff:
+                extra.append(f"gpb_eff={gpb_eff}")
+            if extra:
+                return base + "; " + " ".join(extra)
+            return base
         return ""
 
     lines: list[str] = []
@@ -105,7 +130,7 @@ def _build_block(picked: dict[str, Dict[str, Any]]) -> str:
         bits = _fmt_int(r.get("security_metric_value"))
         gpb = _fmt_float(r.get("gas_per_secure_bit"))
         sec_model = str(r.get("security_model") or "")
-        n = note_for(bn)
+        n = note_for(bn, r)
         lines.append(f"| `{bn}` | {gas} | `{denom}` | {bits} | {gpb} | {repo_at} | `{sec_model}` | {n} |")
 
     lines.append("")
