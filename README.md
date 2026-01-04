@@ -71,15 +71,6 @@ It exists to answer one practical question for Ethereum engineers:
 In other words: **"gas/verify" is not enough** if the protocol envelope bounds end-to-end security even when the wallet uses PQ signatures.
 
 ---
-## PQ aggregation surfaces (BLS → PQ)
-
-BLS aggregation is efficient on Ethereum because the final cryptographic check is constant-sized, but the *practical* verification path still includes “surface costs” (bitfields → pubkey reconstruction/summation, protocol plumbing).
-
-Post-quantum signature families generally lose BLS-style algebraic aggregation, pushing designs toward **proof-based aggregation** (recursive SNARKs, folding, accumulation). That makes “gas per verify” an incomplete metric: you also need **surface-aware, security-normalized** benchmarks for aggregation paths.
-
-Spec note:
-- `spec/pq_signature_aggregation_context.md`
-
 
 ## Core Metric
 
