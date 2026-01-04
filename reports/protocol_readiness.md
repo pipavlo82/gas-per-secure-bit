@@ -88,5 +88,6 @@ Notes:
 - Vendor is pinned by commit in dataset: `ZKNoxHQ/ETHDILITHIUM`@`df999ed4f80`.
 - `dilithium_verify_nistkat` is the NIST-shape verifier in the vendor repo.
 - `ethdilithium_verify_evmfriendly` is the EVM-friendly variant in the same vendor repo.
+- Recorded points are signature verification only (sig::verify); AA end-to-end surfaces (validateUserOp/handleOps) are not yet measured for this vendor.
 - Denominator here uses `security_equiv_bits` (override SEC_BITS_* in the runner if you confirm a different category).
 <!-- DILITHIUM_VENDOR_END -->

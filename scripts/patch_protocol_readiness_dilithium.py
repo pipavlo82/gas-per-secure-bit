@@ -152,6 +152,7 @@ def _build_block(picked: Dict[str, Dict[str, Any]]) -> str:
     lines.append(f"- Vendor is pinned by commit in dataset: {repo_at}.")
     lines.append("- `dilithium_verify_nistkat` is the NIST-shape verifier in the vendor repo.")
     lines.append("- `ethdilithium_verify_evmfriendly` is the EVM-friendly variant in the same vendor repo.")
+    lines.append("- Recorded points are signature verification only (sig::verify); AA end-to-end surfaces (validateUserOp/handleOps) are not yet measured for this vendor.")
     lines.append("- Denominator here uses `security_equiv_bits` (override SEC_BITS_* in the runner if you confirm a different category).")
     lines.append(END)
     return "\n".join(lines) + "\n"
