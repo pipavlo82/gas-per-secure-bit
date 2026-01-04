@@ -261,6 +261,10 @@ def regen_csv_from_jsonl(jsonl_path: Path, csv_path: Path) -> Tuple[int, int]:
         "notes",
         "depends_on",
         "provenance",
+        "vector_pack_ref",
+        "vector_pack_id",
+        "vector_id",
+
     ]
 
     with csv_path.open("w", newline="", encoding="utf-8") as f:
