@@ -81,8 +81,8 @@ Notes:
 
 | bench | gas | security_metric | bits | gas/bit | repo@commit | security_model | notes |
 |---|---:|---|---:|---:|---|---|---|
-| `dilithium_verify_nistkat` | 20,161,676 | `security_equiv_bits` | 128 | 157513.09375 | `ZKNoxHQ/ETHDILITHIUM`@`df999ed4f80` | `standalone` | sec128=128 gpb128=157513.09375; NIST-shape verifier (vendor) |
-| `ethdilithium_verify_evmfriendly` | 13,495,423 | `security_equiv_bits` | 128 | 105432.9921875 | `ZKNoxHQ/ETHDILITHIUM`@`df999ed4f80` | `standalone` | sec128=128 gpb128=105432.9921875; EVM-friendly variant (vendor) |
+| `dilithium_verify_nistkat` | 20,161,676 | `security_equiv_bits` | 128 | 157513.09375 | `ZKNoxHQ/ETHDILITHIUM`@`df999ed4f80` | `standalone` | sec128=128 gpb128=157513.09375; path-pinned; Foundry: test/ZKNOX_dilithiumKATS.t.sol:testVerify |
+| `ethdilithium_verify_evmfriendly` | 13,495,423 | `security_equiv_bits` | 128 | 105432.9921875 | `ZKNoxHQ/ETHDILITHIUM`@`df999ed4f80` | `standalone` | sec128=128 gpb128=105432.9921875; path-pinned; Foundry: test/ZKNOX_ethdilithiumKAT.t.sol:testVerify |
 
 Notes:
 - Vendor is pinned by commit in dataset: `ZKNoxHQ/ETHDILITHIUM`@`df999ed4f80`.

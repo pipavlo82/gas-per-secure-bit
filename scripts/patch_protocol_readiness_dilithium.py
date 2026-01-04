@@ -114,9 +114,9 @@ def _build_block(picked: Dict[str, Dict[str, Any]]) -> str:
     def note_for(bn: str) -> str:
         # Keep these short; the raw record notes (sec128=..., etc.) are already useful.
         if bn == "dilithium_verify_nistkat":
-            return "NIST-shape verifier (vendor)"
+            return "path-pinned; Foundry: test/ZKNOX_dilithiumKATS.t.sol:testVerify"
         if bn == "ethdilithium_verify_evmfriendly":
-            return "EVM-friendly variant (vendor)"
+            return "path-pinned; Foundry: test/ZKNOX_ethdilithiumKAT.t.sol:testVerify"
         return ""
 
     lines: list[str] = []
