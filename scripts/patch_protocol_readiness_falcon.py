@@ -1,113 +1,157 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 import json
-import sys
 from pathlib import Path
+from datetime import datetime
+from typing import Any, Dict, Optional
 
 BEGIN = "<!-- FALCON_VENDOR_BEGIN -->"
 END   = "<!-- FALCON_VENDOR_END -->"
 
-TARGETS = [
-    ("falcon", "falcon_getUserOpHash_via_entry", "QuantumAccount"),
-    ("falcon", "falcon_handleOps_userOp_e2e", "QuantumAccount"),
+# Prefer inserting Falcon block before Dilithium block if Falcon markers absent.
+ANCHOR_AFTER = "<!-- MLDSA65_VENDOR_END -->"
+ANCHOR_BEFORE = "<!-- DILITHIUM_VENDOR_BEGIN -->"
+
+RESULTS = Path("data/results.jsonl")
+OUT_MD  = Path("reports/protocol_readiness.md")
+
+ORDER = [
+    "falcon_verifySignature_log",
+    "qa_validateUserOp_userop_log",
+    "falcon_getUserOpHash_via_entry",
+    "falcon_handleOps_userOp_e2e",
 ]
 
-def load_jsonl(path: Path):
-    rows = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        rows.append(json.loads(line))
-    return rows
-
-def pick_latest(rows, scheme, bench_name, repo):
-    cand = [r for r in rows
-            if r.get("scheme") == scheme
-            and r.get("bench_name") == bench_name
-            and r.get("repo") == repo]
-    if not cand:
-        return None
-    # ts_utc is ISO; lexicographic sort OK
-    cand.sort(key=lambda r: r.get("ts_utc", ""))
-    return cand[-1]
-
-def fmt_int(x):
+def _fmt_int(n: Any) -> str:
     try:
-        return f"{int(x):,}"
+        return f"{int(float(n)):,}"
     except Exception:
-        try:
-            return f"{int(float(x)):,}"
-        except Exception:
-            return str(x)
+        return str(n)
 
-def fmt_float(x):
+def _fmt_float(x: Any) -> str:
     try:
         v = float(x)
         s = f"{v:.10f}".rstrip("0").rstrip(".")
-        return s if s else "0"
+        return s
     except Exception:
         return str(x)
 
-def short_commit(c):
-    c = c or ""
-    return c[:12]
+def _read_jsonl(path: Path) -> list[Dict[str, Any]]:
+    if not path.exists():
+        return []
+    rows: list[Dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        try:
+            rows.append(json.loads(s))
+        except Exception:
+            continue
+    return rows
 
-def render_block(picked):
-    lines = []
+def _parse_ts(ts: Optional[str]) -> datetime:
+    if not ts:
+        return datetime.min
+    try:
+        if ts.endswith("Z"):
+            ts = ts[:-1] + "+00:00"
+        return datetime.fromisoformat(ts)
+    except Exception:
+        return datetime.min
+
+def _pick_latest(rows: list[Dict[str, Any]], bench_name: str) -> Optional[Dict[str, Any]]:
+    cand = [r for r in rows if r.get("bench_name") == bench_name]
+    if not cand:
+        return None
+    cand.sort(key=lambda r: _parse_ts(r.get("ts_utc")), reverse=True)
+    return cand[0]
+
+def _build_block(picked: dict[str, Dict[str, Any]]) -> str:
+    repo = "QuantumAccount"
+    commit_full = ""
+    for bn in ORDER:
+        if bn in picked:
+            commit_full = str(picked[bn].get("commit") or "")
+            break
+    commit_short = commit_full[:11] if commit_full else ""
+    repo_at = f"`{repo}`@`{commit_short}`" if commit_short else f"`{repo}`"
+
+    def note_for(bn: str) -> str:
+        if bn == "falcon_verifySignature_log":
+            return "log-isolated; Foundry logs: test_falcon_verify_gas_log => 'gas_falcon_verify: <N>'"
+        if bn == "qa_validateUserOp_userop_log":
+            return "log-isolated; Foundry logs: test_validateUserOp_gas_log => 'gas_validateUserOp: <N>'"
+        if bn == "falcon_getUserOpHash_via_entry":
+            return "AA surface: EntryPoint hashing only (not end-to-end AA execution)"
+        if bn == "falcon_handleOps_userOp_e2e":
+            return "end-to-end AA (`handleOps`); treat as protocol-surface upper bound"
+        return ""
+
+    lines: list[str] = []
+    lines.append(BEGIN)
     lines.append("### Falcon vendor (QuantumAccount) — pinned ref")
     lines.append("")
     lines.append("| bench | gas | security_metric | bits | gas/bit | repo@commit | security_model | notes |")
     lines.append("|---|---:|---|---:|---:|---|---|---|")
 
-    for r in picked:
-        if r is None:
-            lines.append("| _missing_ | - | - | - | - | - | - | - |")
+    for bn in ORDER:
+        r = picked.get(bn)
+        if not r:
             continue
-
-        bench = r.get("bench_name", "")
-        gas = fmt_int(r.get("gas_verify", 0))
-        smt = r.get("security_metric_type", "unknown")
-        bits = fmt_float(r.get("security_metric_value", 0.0))
-        gpb = fmt_float(r.get("gas_per_secure_bit", 0.0))
-        repo = r.get("repo", "")
-        commit = short_commit(r.get("commit", ""))
-        sec_model = r.get("security_model", "")
-        notes = r.get("notes", "")
-
-        lines.append(
-            f"| `{bench}` | {gas} | `{smt}` | {bits} | {gpb} | `{repo}`@`{commit}` | `{sec_model}` | {notes} |"
-        )
+        gas = _fmt_int(r.get("gas_verify"))
+        denom = str(r.get("security_metric_type") or "")
+        bits = _fmt_int(r.get("security_metric_value"))
+        gpb = _fmt_float(r.get("gas_per_secure_bit"))
+        sec_model = str(r.get("security_model") or "")
+        n = note_for(bn)
+        lines.append(f"| `{bn}` | {gas} | `{denom}` | {bits} | {gpb} | {repo_at} | `{sec_model}` | {n} |")
 
     lines.append("")
     lines.append("Notes:")
-    lines.append("- `falcon_getUserOpHash_via_entry` measures the EntryPoint hashing surface (not end-to-end AA execution).")
-    lines.append("- `falcon_handleOps_userOp_e2e` measures an end-to-end `handleOps()` flow, including ERC-4337 surface overhead; treat as a protocol-surface upper bound.")
-    lines.append("- Normalization in this repo uses `security_equiv_bits = 256` for Falcon-1024 (Cat5-style denominator).")
+    lines.append(f"- Vendor is pinned by commit in dataset: {repo_at}.")
+    lines.append("- `security_equiv_bits = 256` is used as the Falcon-1024 normalization denominator in this repo.")
+    lines.append(END)
     return "\n".join(lines)
 
-def patch(md_text: str, block_text: str) -> str:
-    if BEGIN in md_text and END in md_text:
-        pre = md_text.split(BEGIN)[0]
-        post = md_text.split(END)[1]
-        return pre + BEGIN + "\n" + block_text + "\n" + END + post
-    return md_text.rstrip() + "\n\n" + BEGIN + "\n" + block_text + "\n" + END + "\n"
+def _upsert_block(txt: str, block: str) -> str:
+    # If markers exist, replace in-place.
+    if BEGIN in txt and END in txt:
+        pre, rest = txt.split(BEGIN, 1)
+        _, post = rest.split(END, 1)
+        return pre + block + post
 
-def main():
-    if len(sys.argv) != 3:
-        print(f"Usage: {sys.argv[0]} <data/results.jsonl> <reports/protocol_readiness.md>", file=sys.stderr)
-        return 2
+    # Otherwise insert the block at a stable location.
+    if ANCHOR_BEFORE in txt:
+        return txt.replace(ANCHOR_BEFORE, block + "\n\n" + ANCHOR_BEFORE, 1)
 
-    jsonl_path = Path(sys.argv[1])
-    md_path = Path(sys.argv[2])
+    if ANCHOR_AFTER in txt:
+        return txt.replace(ANCHOR_AFTER, ANCHOR_AFTER + "\n\n" + block, 1)
 
-    rows = load_jsonl(jsonl_path)
-    picked = [pick_latest(rows, s, b, repo) for (s, b, repo) in TARGETS]
-    block = render_block(picked)
+    # Fallback: append at end.
+    suffix = "" if txt.endswith("\n") else "\n"
+    return txt + suffix + "\n" + block + "\n"
 
-    md_text = md_path.read_text(encoding="utf-8") if md_path.exists() else ""
-    md_path.write_text(patch(md_text, block), encoding="utf-8")
-    print(f"Wrote {md_path}")
-    return 0
+def main() -> None:
+    if not OUT_MD.exists():
+        raise SystemExit(f"missing {OUT_MD}")
+
+    all_rows = _read_jsonl(RESULTS)
+    qa_rows = [r for r in all_rows if r.get("repo") == "QuantumAccount" and r.get("scheme") == "falcon"]
+
+    picked: Dict[str, Dict[str, Any]] = {}
+    for bn in ORDER:
+        r = _pick_latest(qa_rows, bn)
+        if r:
+            picked[bn] = r
+
+    block = _build_block(picked)
+
+    txt = OUT_MD.read_text(encoding="utf-8")
+    new_txt = _upsert_block(txt, block)
+    OUT_MD.write_text(new_txt, encoding="utf-8")
+    print(f"[patch] wrote {OUT_MD}")
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

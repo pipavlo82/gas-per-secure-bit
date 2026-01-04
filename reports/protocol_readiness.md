@@ -66,13 +66,14 @@ bash scripts/make_reports.sh
 
 | bench | gas | security_metric | bits | gas/bit | repo@commit | security_model | notes |
 |---|---:|---|---:|---:|---|---|---|
-| `falcon_getUserOpHash_via_entry` | 218,333 | `security_equiv_bits` | 256 | 852.86328125 | `QuantumAccount`@`1970dcad8907` | `standalone` | sec256=256 gpb256=852.86328125 |
-| `falcon_handleOps_userOp_e2e` | 10,966,076 | `security_equiv_bits` | 256 | 42836.234375 | `QuantumAccount`@`1970dcad8907` | `weakest-link` | sec256=256 gpb256=42836.234375 weakest_link=erc4337_bundler_ecdsa eff128=128 gpb_eff=85672.46875 |
+| `falcon_verifySignature_log` | 10,336,055 | `security_equiv_bits` | 256 | 40375.21484375 | `QuantumAccount`@`1970dcad890` | `raw` | log-isolated; Foundry logs: test_falcon_verify_gas_log => 'gas_falcon_verify: <N>' |
+| `qa_validateUserOp_userop_log` | 10,589,132 | `security_equiv_bits` | 256 | 41363.796875 | `QuantumAccount`@`1970dcad890` | `raw` | log-isolated; Foundry logs: test_validateUserOp_gas_log => 'gas_validateUserOp: <N>' |
+| `falcon_getUserOpHash_via_entry` | 218,333 | `security_equiv_bits` | 256 | 852.86328125 | `QuantumAccount`@`1970dcad890` | `standalone` | AA surface: EntryPoint hashing only (not end-to-end AA execution) |
+| `falcon_handleOps_userOp_e2e` | 10,966,076 | `security_equiv_bits` | 256 | 42836.234375 | `QuantumAccount`@`1970dcad890` | `weakest-link` | end-to-end AA (`handleOps`); treat as protocol-surface upper bound |
 
 Notes:
-- `falcon_getUserOpHash_via_entry` measures the EntryPoint hashing surface (not end-to-end AA execution).
-- `falcon_handleOps_userOp_e2e` measures an end-to-end `handleOps()` flow, including ERC-4337 surface overhead; treat as a protocol-surface upper bound.
-- Normalization in this repo uses `security_equiv_bits = 256` for Falcon-1024 (Cat5-style denominator).
+- Vendor is pinned by commit in dataset: `QuantumAccount`@`1970dcad890`.
+- `security_equiv_bits = 256` is used as the Falcon-1024 normalization denominator in this repo.
 <!-- FALCON_VENDOR_END -->
 
 <!-- DILITHIUM_VENDOR_BEGIN -->
