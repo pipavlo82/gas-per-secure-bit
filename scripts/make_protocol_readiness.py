@@ -15,7 +15,7 @@ Output:
 - reports/protocol_readiness.md
 
 Design goals:
-- Conservative: effective_security_bits is capped by weakest dependency.
+- Conservative: effective_security_bits is capped by weakest dependency (when available).
 - Reproducible: keep only latest record per canonical ID by ts_utc (fallback to file order).
 - Tolerant: skip malformed/meta records instead of failing.
 
@@ -27,6 +27,7 @@ Important correctness note:
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -42,10 +43,11 @@ OUT_MD = ROOT / "reports" / "protocol_readiness.md"
 DEFAULT_TARGET_BITS_BY_CATEGORY: Dict[str, int] = {
     "ecdsa": 128,
     "mldsa65": 192,
-    "falcon1024": 256,
+    "falcon": 256,       # canonical scheme now "falcon"
     "dilithium": 128,    # default; bump to 192/256 when you pin which level you benchmark
     "randao": 128,       # placeholder until threat model finalization
     "attestation": 128,  # placeholder until threat model finalization
+    "das": 128,          # display-only; real denom often "das_sample_bits"
 }
 
 
@@ -60,6 +62,9 @@ BLOCKER_HINTS = [
 ]
 
 
+_EFF_RE = re.compile(r"(?:^|\s)eff\d+\s*=\s*(\d+)(?:\s|$)")
+
+
 def _as_int(x: Any) -> Optional[int]:
     if x is None:
         return None
@@ -70,7 +75,6 @@ def _as_int(x: Any) -> Optional[int]:
             return int(x)
         if isinstance(x, float):
             return int(x)
-        # strings like "128.0"
         return int(float(str(x)))
     except Exception:
         return None
@@ -80,19 +84,32 @@ def _as_str(x: Any) -> Optional[str]:
     if x is None:
         return None
     try:
-        s = str(x)
-        return s
+        return str(x)
     except Exception:
         return None
 
 
+def _parse_eff_from_notes(notes: Optional[str]) -> Optional[int]:
+    """
+    Accept upstream effective cap encoded in notes, e.g.:
+      "weakest_link=... eff128=128 gpb_eff=..."
+    We parse the RHS numeric value (128).
+    """
+    if not notes:
+        return None
+    m = _EFF_RE.search(notes)
+    if not m:
+        return None
+    return _as_int(m.group(1))
+
+
 @dataclass
 class Record:
-    rid: str                      # canonical id, e.g. "falcon1024::qa_handleOps_userop_foundry"
+    rid: str                      # canonical id, e.g. "falcon::falcon_handleOps_userOp_e2e"
     category: str                 # usually equals scheme
     gas: Optional[int]            # gas_verify or gas_surface
     security_equiv_bits: Optional[int]      # denominator bits depending on metric
-    effective_security_bits: Optional[int]  # if explicitly present (rare)
+    effective_security_bits: Optional[int]  # explicit or upstream-capped bits
     depends_on: List[str]
     ts: str
     meta: Dict[str, Any]
@@ -101,9 +118,9 @@ class Record:
     def canonical_rid(obj: Dict[str, Any]) -> Optional[str]:
         """
         Canonical ID policy:
-        1) Prefer scheme::bench_name (this is the repo's declared canonical id)
-        2) Then fallback to explicit ids (id/name/bench_id)
-        3) Then fallback to bench_name alone
+        1) Prefer scheme::bench_name (repo canonical id)
+        2) Fallback to explicit ids (id/name/bench_id)
+        3) Fallback to bench_name alone
         IMPORTANT: do NOT use "surface" as id (collides).
         """
         scheme = obj.get("scheme") or obj.get("category")
@@ -132,11 +149,9 @@ class Record:
         smt = obj.get("security_metric_type")
         smv = obj.get("security_metric_value")
 
-        # Accept common types
         if smv is not None and smt in (None, "", "lambda_eff", "security_equiv_bits", "H_min", "bits", "security_bits"):
             return _as_int(smv)
 
-        # Unknown type: still try to parse numeric value conservatively
         if smv is not None and smt:
             return _as_int(smv)
 
@@ -150,10 +165,7 @@ class Record:
 
         category = obj.get("scheme") or obj.get("category")
         if not category:
-            if "::" in rid:
-                category = rid.split("::", 1)[0]
-            else:
-                category = "unknown"
+            category = rid.split("::", 1)[0] if "::" in rid else "unknown"
         category = str(category)
 
         gas = obj.get("gas")
@@ -164,11 +176,18 @@ class Record:
         gas_i = _as_int(gas)
 
         seb = Record.parse_security_bits(obj)
+
+        # 1) explicit field wins
         esb = _as_int(obj.get("effective_security_bits"))
+
+        # 2) otherwise accept upstream cap from notes (e.g., eff128=128)
+        if esb is None:
+            notes = _as_str(obj.get("notes"))
+            esb = _parse_eff_from_notes(notes)
 
         depends_on = obj.get("depends_on") or []
         if isinstance(depends_on, str):
-            depends_on = [depends_on]
+            depends_on = [depst := depends_on]
         depends_on = [str(x) for x in depends_on]
 
         ts = str(obj.get("ts_utc") or obj.get("timestamp") or obj.get("ts") or obj.get("time") or "")
@@ -204,7 +223,6 @@ def load_latest_records(jsonl_path: Path) -> Dict[str, Record]:
             try:
                 r = Record.from_json(obj)
             except Exception:
-                # Tolerant: skip meta lines / unrecognized records
                 continue
 
             ts = r.ts
@@ -215,7 +233,6 @@ def load_latest_records(jsonl_path: Path) -> Dict[str, Record]:
 
             prev_ts, prev_i, _ = prev
 
-            # Prefer later ts if comparable; otherwise fallback to later line index
             if ts and prev_ts and ts > prev_ts:
                 latest[r.rid] = (ts, i, r)
             elif ts and not prev_ts:
@@ -228,7 +245,12 @@ def load_latest_records(jsonl_path: Path) -> Dict[str, Record]:
 
 def compute_effective_security_bits(records: Dict[str, Record]) -> Dict[str, int]:
     """
-    Weakest-link model: effective(r) = min( own(r), effective(dep1), ...).
+    Weakest-link model: effective(r) = min( own(r), effective(dep1), ... ).
+
+    Policy:
+    - If a dependency is missing from the dataset, we do NOT cap to 0.
+      (Otherwise we'd introduce a false "0-bit" artifact.)
+    - Upstream cap can be encoded as Record.effective_security_bits (explicit or notes-derived).
     """
     memo: Dict[str, int] = {}
     visiting: Set[str] = set()
@@ -244,7 +266,6 @@ def compute_effective_security_bits(records: Dict[str, Record]) -> Dict[str, int
         if rid in memo:
             return memo[rid]
         if rid in visiting:
-            # Cycle => conservative
             memo[rid] = 0
             return 0
         visiting.add(rid)
@@ -257,7 +278,11 @@ def compute_effective_security_bits(records: Dict[str, Record]) -> Dict[str, int
 
         cap = own_bits(r)
         for dep in r.depends_on:
+            if dep not in records:
+                # Missing dep => do not artificially cap to 0
+                continue
             cap = min(cap, dfs(dep))
+
         memo[rid] = cap
         visiting.remove(rid)
         return cap
@@ -267,7 +292,7 @@ def compute_effective_security_bits(records: Dict[str, Record]) -> Dict[str, int
     return memo
 
 
-def find_cap_reason(r: Record, eff_map: Dict[str, int]) -> Optional[str]:
+def find_cap_reason(r: Record, eff_map: Dict[str, int], records: Dict[str, Record]) -> Optional[str]:
     """
     If effective bits are lower than the record's own bits, find which dependency causes the cap.
     """
@@ -278,9 +303,8 @@ def find_cap_reason(r: Record, eff_map: Dict[str, int]) -> Optional[str]:
     if eff >= int(own):
         return None
 
-    # Find a dependency whose effective bits matches the cap
     for dep in r.depends_on:
-        if eff_map.get(dep, 0) == eff:
+        if dep in records and eff_map.get(dep, 0) == eff:
             return dep
     return "depends_on"
 
@@ -329,13 +353,11 @@ def main() -> None:
         own = r.effective_security_bits if r.effective_security_bits is not None else r.security_equiv_bits
         own_i = int(own) if own is not None else 0
 
-        # Display-only target:
-        # - prefer map; if missing/0 => fallback to max(own, eff) so we never print 0.
         target = DEFAULT_TARGET_BITS_BY_CATEGORY.get(r.category, 0)
         if not target:
             target = max(own_i, int(eff))
 
-        cap_dep = find_cap_reason(r, eff_map)
+        cap_dep = find_cap_reason(r, eff_map, records)
         blocker = blocker_text(cap_dep) if cap_dep else ""
 
         lines.append(
@@ -344,7 +366,8 @@ def main() -> None:
 
     lines.append("")
     lines.append("Notes:")
-    lines.append("- `effective_security_bits` is conservative: it never exceeds the weakest dependency in `depends_on`.")
+    lines.append("- `effective_security_bits` is conservative: it never exceeds the weakest dependency in `depends_on` (when that dependency is present in the dataset).")
+    lines.append("- Upstream caps may be encoded in records as `effective_security_bits` or in notes as `effNNN=MMM` (e.g., `eff128=128`).")
     lines.append("- `H_min` surfaces are currently placeholders until the threat model is finalized (gas is measured).")
     lines.append("- `Target (bits)` is display-only: if a category is unknown, target falls back to `max(own_bits, effective_bits)`.")
     lines.append("")
