@@ -73,6 +73,7 @@ bash scripts/make_reports.sh
 
 Notes:
 - Vendor is pinned by commit in dataset: `QuantumAccount`@`1970dcad890`.
+- Recorded points are signature verification only (sig::verify); AA end-to-end surfaces (validateUserOp/handleOps) are not yet measured for this vendor.
 - `security_equiv_bits = 256` is used as the Falcon-1024 normalization denominator in this repo.
 <!-- FALCON_VENDOR_END -->
 
