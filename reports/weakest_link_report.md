@@ -10,15 +10,5 @@ This report is generated from `data/results.jsonl`.
 
 ## Findings
 
-| Record | Chain | Declared bits | Depends on | Effective bits |
-|---|---|---:|---|---:|
-| `falcon1024::qa_handleOps_userop_foundry_weakest_link` | EVM/L1 | 256.0 | ecdsa::l1_envelope_assumption, falcon1024::qa_handleOps_userop_foundry | 128.0 |
-| `falcon1024::qa_validateUserOp_userop_log_weakest_link` | EVM/L1 | 256.0 | ecdsa::l1_envelope_assumption, falcon1024::qa_validateUserOp_userop_log | 128.0 |
-| `falcon1024::qa_handleOps_userop_foundry_weakest_link_vnext` | EVM/L1 | 256.0 | ecdsa::l1_envelope_assumption, randao::l1_randao_mix_surface, attestation::relay_attestation_surface, falcon1024::qa_handleOps_userop_foundry | 32.0 |
-
-## Notes
-
-- Add explicit `depends_on` edges to reflect real execution paths (e.g., AA user op → L1 envelope).
-- Keep baseline envelope assumptions as separate records (e.g., `ecdsa::l1_envelope_assumption`).
-- Entropy/attestation surfaces should use `security_metric_type=H_min` with an explicit threat model in `notes`.
-
+No records with `security_model=weakest_link` or non-empty `depends_on` were found.
+Add `depends_on` to AA/UserOp benchmarks to compute end-to-end effective security.

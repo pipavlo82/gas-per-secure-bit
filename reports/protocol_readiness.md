@@ -18,14 +18,11 @@ python3 scripts/make_protocol_readiness.py
 | ecdsa | `ecdsa::l1_envelope_assumption` | 0 | 128 | 128 | - |  |
 | entropy | `entropy::randao_hash_based_assumption` | 0 | 128 | 128 | - |  |
 | falcon | `falcon::falcon_getUserOpHash_via_entry` | 218333 | 256 | 256 | - |  |
-| falcon | `falcon::falcon_handleOps_userOp_e2e` | 10966076 | 256 | 256 | - |  |
+| falcon | `falcon::falcon_handleOps_userOp_e2e` | 10966076 | 0 | 256 | erc4337_bundler_ecdsa | Capped by dependency: erc4337_bundler_ecdsa |
 | falcon1024 | `falcon1024::falcon_verifySignature_log` | 10336055 | 256 | 256 | - |  |
 | falcon1024 | `falcon1024::qa_getUserOpHash_foundry` | 218333 | 256 | 256 | - |  |
 | falcon1024 | `falcon1024::qa_handleOps_userop_foundry` | 10966076 | 256 | 256 | - |  |
-| falcon1024 | `falcon1024::qa_handleOps_userop_foundry_weakest_link` | 10966076 | 128 | 256 | ecdsa::l1_envelope_assumption | Capped by L1 ECDSA envelope assumption (PQ not enshrined end-to-end). |
-| falcon1024 | `falcon1024::qa_handleOps_userop_foundry_weakest_link_vnext` | 10966076 | 32 | 256 | randao::l1_randao_mix_surface | Measured gas; H_min denominator is a placeholder until threat model is fixed. |
 | falcon1024 | `falcon1024::qa_validateUserOp_userop_log` | 10589132 | 256 | 256 | - |  |
-| falcon1024 | `falcon1024::qa_validateUserOp_userop_log_weakest_link` | 10589132 | 128 | 256 | ecdsa::l1_envelope_assumption | Capped by L1 ECDSA envelope assumption (PQ not enshrined end-to-end). |
 | mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho0_log` | 1499354 | 128 | 192 | - |  |
 | mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho1_log` | 1499354 | 128 | 192 | - |  |
 | mldsa65 | `mldsa65::verify_poc_foundry` | 68901612 | 128 | 192 | - |  |

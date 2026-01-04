@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VENDOR_DIR="${ROOT}/vendor/QuantumAccount"
+VENDOR_DIR="${ROOT}/vendors/QuantumAccount"
 
 # Defaults: pinned vendor source (override via env if needed)
 : "${QA_REPO_URL:=https://github.com/Cointrol-Limited/QuantumAccount.git}"
@@ -34,7 +34,7 @@ git checkout -f "${QA_REF}"
 PINNED_COMMIT="$(git rev-parse HEAD)"
 
 echo "[qa] pinned commit: ${PINNED_COMMIT}"
-echo "[qa] repo path: vendor/QuantumAccount"
+echo "[qa] repo path: vendors/QuantumAccount"
 
 echo "[qa] updating submodules"
 git submodule update --init --recursive
@@ -107,7 +107,7 @@ def row(bench_name, surface_class, gas, notes, depends_on=""):
         "depends_on": depends_on,
 
         # single column in results.csv; encode full provenance tuple
-        "provenance": f"QuantumAccount(path=vendor/QuantumAccount; commit={pinned}; bench={bench_name})",
+        "provenance": f"QuantumAccount(path=vendors/QuantumAccount; commit={pinned}; bench={bench_name})",
     }
 
 r1 = row(
