@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "forge-std/console2.sol";
 
 contract RandaoSurface {
     function touch() external view returns (bytes32) {
@@ -22,7 +21,7 @@ contract ProtocolRandaoSurface_Gas_Test is Test {
         s = new RandaoSurface();
     }
 
-    function test_l1_randao_mix_surface_gas() public view {
+    function test_l1_randao_mix_surface_gas() public {
         // ВИМІРЮЄМО ЛИШЕ ТІЛО surface-операції (log-isolated):
         // очікуваний лог для парсера:
         //   "randao::l1_randao_mix_surface gas: <N>"
@@ -31,9 +30,11 @@ contract ProtocolRandaoSurface_Gas_Test is Test {
         bytes32 out = s.touch();
         uint256 used = g0 - gasleft();
 
-        // щоб результат не був "unused" (і не було умовної оптимізації)
-        out;
+        // щоб результат не був "unused"
+        assertTrue(out != bytes32(0) || out == bytes32(0));
 
-        console2.log("randao::l1_randao_mix_surface gas:", used);
+        // Це дає рівно рядок:
+        // randao::l1_randao_mix_surface gas: <N>
+        emit log_named_uint("randao::l1_randao_mix_surface gas", used);
     }
 }
