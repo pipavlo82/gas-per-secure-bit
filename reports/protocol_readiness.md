@@ -81,6 +81,7 @@ Notes:
 | bench | gas | security_metric | bits | gas/bit | repo@commit | security_model | notes |
 |---|---:|---|---:|---:|---|---|---|
 | `dilithium_verify_nistkat` | 20,161,676 | `security_equiv_bits` | 128 | 157513.09375 | `ZKNoxHQ/ETHDILITHIUM`@`df999ed4f80` | `standalone` | sec128=128 gpb128=157513.09375 |
+| `ethdilithium_verify_evmfriendly` | 13,495,423 | `security_equiv_bits` | 128 | 105432.9921875 | `ZKNoxHQ/ETHDILITHIUM`@`df999ed4f80` | `standalone` | sec128=128 gpb128=105432.9921875 |
 
 Notes:
 - `dilithium_verify_nistkat` is the NIST-shape verifier in the vendor repo.

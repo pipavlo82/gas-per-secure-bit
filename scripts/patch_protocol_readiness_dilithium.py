@@ -11,7 +11,7 @@ END = "<!-- DILITHIUM_VENDOR_END -->"
 
 TARGET = [
     ("dilithium", "dilithium_verify_nistkat"),
-    ("ethdilithium", "ethdilithium_verify_evmfriendly"),
+    ("dilithium", "ethdilithium_verify_evmfriendly"),
 ]
 
 def _latest_row(rows, scheme, bench):
