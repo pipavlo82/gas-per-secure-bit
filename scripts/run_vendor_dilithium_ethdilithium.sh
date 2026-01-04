@@ -2,10 +2,10 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VENDOR_DIR="${ROOT}/vendor/ETHDILITHIUM"
+VENDOR_DIR="${ROOT}/vendors/ETHDILITHIUM"
 
 : "${DIL_REPO_URL:=https://github.com/ZKNoxHQ/ETHDILITHIUM.git}"
-: "${DIL_REF:?Set DIL_REF to a pinned ref/commit (full SHA recommended)}"
+: "${DIL_REF:=df999ed4f8032d26d9d3d22748407afbb7978ae7}"
 
 # Optional knobs
 : "${RESET_DATA:=0}"
@@ -39,7 +39,7 @@ git checkout -f "${DIL_REF}"
 PINNED_COMMIT="$(git rev-parse HEAD)"
 
 echo "[dil] pinned commit: ${PINNED_COMMIT}"
-echo "[dil] repo path: vendor/ETHDILITHIUM"
+echo "[dil] repo path: vendors/ETHDILITHIUM"
 
 if [[ -f .gitmodules ]]; then
   echo "[dil] updating submodules"
@@ -100,31 +100,31 @@ def note(gas:int, sec:int) -> str:
 
 common = dict(
     scheme="dilithium",
-    surface="sig::verify",
+    surface_class="sig::verify",
     chain_profile=chain,
-    lambda_eff=lam,
     repo="ZKNoxHQ/ETHDILITHIUM",
     commit=commit,
-    path="vendor/ETHDILITHIUM",
+    provenance={"repo": "ZKNoxHQ/ETHDILITHIUM", "commit": commit, "path": "vendors/ETHDILITHIUM"},
     security_model="standalone",
-    provenance_repo="ZKNoxHQ/ETHDILITHIUM",
-    provenance_commit=commit,
-    provenance_path="vendor/ETHDILITHIUM",
 )
 
 r1 = dict(common)
 r1.update(
     bench_name=bench_nist,
-    gas=gas_nist,
-    security_equiv_bits=sec_nist,
+    gas_verify=gas_nist,
+    security_metric_type="security_equiv_bits",
+    security_metric_value=float(sec_nist),
+    gas_per_secure_bit=float((gas_nist / sec_nist) if (gas_nist and sec_nist) else 0.0),
     notes=note(gas_nist, sec_nist),
 )
 
 r2 = dict(common)
 r2.update(
     bench_name=bench_evm,
-    gas=gas_evm,
-    security_equiv_bits=sec_evm,
+    gas_verify=gas_evm,
+    security_metric_type="security_equiv_bits",
+    security_metric_value=float(sec_evm),
+    gas_per_secure_bit=float((gas_evm / sec_evm) if (gas_evm and sec_evm) else 0.0),
     notes=note(gas_evm, sec_evm),
 )
 
