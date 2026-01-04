@@ -81,10 +81,11 @@ Notes:
 
 | bench | gas | security_metric | bits | gas/bit | repo@commit | security_model | notes |
 |---|---:|---|---:|---:|---|---|---|
-| `dilithium_verify_nistkat` | 20,161,676 | `security_equiv_bits` | 128 | 157513.09375 | `ZKNoxHQ/ETHDILITHIUM`@`df999ed4f80` | `standalone` | sec128=128 gpb128=157513.09375 |
-| `ethdilithium_verify_evmfriendly` | 13,495,423 | `security_equiv_bits` | 128 | 105432.9921875 | `ZKNoxHQ/ETHDILITHIUM`@`df999ed4f80` | `standalone` | sec128=128 gpb128=105432.9921875 |
+| `dilithium_verify_nistkat` | 20,161,676 | `security_equiv_bits` | 128 | 157513.09375 | `ZKNoxHQ/ETHDILITHIUM`@`df999ed4f80` | `standalone` | sec128=128 gpb128=157513.09375; NIST-shape verifier (vendor) |
+| `ethdilithium_verify_evmfriendly` | 13,495,423 | `security_equiv_bits` | 128 | 105432.9921875 | `ZKNoxHQ/ETHDILITHIUM`@`df999ed4f80` | `standalone` | sec128=128 gpb128=105432.9921875; EVM-friendly variant (vendor) |
 
 Notes:
+- Vendor is pinned by commit in dataset: `ZKNoxHQ/ETHDILITHIUM`@`df999ed4f80`.
 - `dilithium_verify_nistkat` is the NIST-shape verifier in the vendor repo.
 - `ethdilithium_verify_evmfriendly` is the EVM-friendly variant in the same vendor repo.
 - Denominator here uses `security_equiv_bits` (override SEC_BITS_* in the runner if you confirm a different category).
