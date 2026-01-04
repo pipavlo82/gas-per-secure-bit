@@ -224,8 +224,10 @@ For these entries, **gas is measured**, while the **security denominator** (e.g.
 
 Current measured surfaces:
 
-- `randao::l1_randao_mix_surface` — gas = **5,993**, `H_min` = **32** (placeholder)
-- `attestation::relay_attestation_surface` — gas = **12,457**, `H_min` = **128** (placeholder)
+- `randao::l1_randao_mix_surface` — gas = **5820**, `H_min` = **32** (placeholder)
+- `randao::mix_for_sample_selection_surface` — gas = **13,081**, `H_min` = **32** (placeholder)  *(randomness access for DAS sample selection)*
+- `attestation::relay_attestation_surface` — gas = **43876**, `H_min` = **128** (placeholder)
+- `das::verify_sample_512b_surface` — gas = **2,464**, `das_sample_bits` = **4096**  *(512B sample verification surface)*
 
 Reproduce measurements and refresh dataset + reports:
 
@@ -272,10 +274,12 @@ See also:
 
 ### Protocol Surfaces (measured)
 
-| Scheme          | Bench name                    | gas_verify  | security_metric_value (bits) | gas / secure-bit |
-|-----------------|-------------------------------|------------:|-----------------------------:|-----------------:|
-| **RANDAO**      | l1_randao_mix_surface         | 5,993       | 32 (H_min)                   | 187.281          |
-| **Attestation** | relay_attestation_surface     | 12,457      | 128 (H_min)                  | 97.320           |
+| Scheme          | Bench name                          | gas_verify | security_metric_value (bits) | gas / secure-bit |
+|-----------------|-------------------------------------|----------:|-----------------------------:|-----------------:|
+| **RANDAO**      | l1_randao_mix_surface               | 5,820     | 32 (H_min)                   | 181.875          |
+| **RANDAO**      | mix_for_sample_selection_surface    | 13,081    | 32 (H_min)                   | 408.781          |
+| **Attestation** | relay_attestation_surface           | 43,876    | 128 (H_min)                  | 342.781          |
+| **DAS**         | verify_sample_512b_surface          | 2,464     | 4096 (das_sample_bits)       | 0.602            |
 
 **Note:** Protocol surfaces use `security_metric_type=H_min`; the current H_min values are declared placeholders until the threat model is pinned down. Gas numbers are measured; denominators are provisional. For surfaces, `gas_verify` denotes the measured gas of the surface operation/harness.
 
@@ -509,7 +513,9 @@ Local microbench copy:
 
 ### Protocol Surfaces (measured)
 - `randao::l1_randao_mix_surface` — Foundry gas harness (measured)
+- `randao::mix_for_sample_selection_surface` — Foundry gas harness (measured)
 - `attestation::relay_attestation_surface` — Foundry gas harness (measured)
+- `das::verify_sample_512b_surface` — Foundry gas harness (measured)
 
 ---
 
