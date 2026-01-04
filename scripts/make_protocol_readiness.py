@@ -15,7 +15,7 @@ Output:
 - reports/protocol_readiness.md
 
 Design goals:
-- Conservative: effective_security_bits is capped by weakest dependency (when available).
+- Conservative: effective_security_bits is capped by weakest dependency.
 - Reproducible: keep only latest record per canonical ID by ts_utc (fallback to file order).
 - Tolerant: skip malformed/meta records instead of failing.
 
@@ -27,7 +27,6 @@ Important correctness note:
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -43,12 +42,29 @@ OUT_MD = ROOT / "reports" / "protocol_readiness.md"
 DEFAULT_TARGET_BITS_BY_CATEGORY: Dict[str, int] = {
     "ecdsa": 128,
     "mldsa65": 192,
-    "falcon": 256,       # canonical scheme now "falcon"
-    "dilithium": 128,    # default; bump to 192/256 when you pin which level you benchmark
+    "mldsa-65": 192,
+    "falcon": 256,
+    "falcon1024": 256,
+    "dilithium": 128,    # default; bump when you pin level
     "randao": 128,       # placeholder until threat model finalization
     "attestation": 128,  # placeholder until threat model finalization
-    "das": 128,          # display-only; real denom often "das_sample_bits"
+    "das": 128,          # protocol surface bucket; not a PQ scheme
 }
+
+
+# Used to resolve short depends_on tokens like "erc4337_bundler_ecdsa"
+# into canonical "scheme::bench_name" rids.
+KNOWN_DEP_PREFIXES: List[str] = [
+    "ecdsa",
+    "mldsa65",
+    "mldsa-65",
+    "falcon",
+    "falcon1024",
+    "dilithium",
+    "randao",
+    "attestation",
+    "das",
+]
 
 
 # Human-facing blocker hints keyed by dependency prefix
@@ -59,10 +75,9 @@ BLOCKER_HINTS = [
      "Measured gas; H_min denominator is a placeholder until threat model is fixed."),
     ("attestation::relay_attestation_surface",
      "Measured gas; H_min denominator is a placeholder until threat model is fixed."),
+    ("ecdsa::erc4337_bundler_ecdsa",
+     "Capped by ERC-4337 bundler ECDSA dependency (weakest-link)."),
 ]
-
-
-_EFF_RE = re.compile(r"(?:^|\s)eff\d+\s*=\s*(\d+)(?:\s|$)")
 
 
 def _as_int(x: Any) -> Optional[int]:
@@ -80,36 +95,13 @@ def _as_int(x: Any) -> Optional[int]:
         return None
 
 
-def _as_str(x: Any) -> Optional[str]:
-    if x is None:
-        return None
-    try:
-        return str(x)
-    except Exception:
-        return None
-
-
-def _parse_eff_from_notes(notes: Optional[str]) -> Optional[int]:
-    """
-    Accept upstream effective cap encoded in notes, e.g.:
-      "weakest_link=... eff128=128 gpb_eff=..."
-    We parse the RHS numeric value (128).
-    """
-    if not notes:
-        return None
-    m = _EFF_RE.search(notes)
-    if not m:
-        return None
-    return _as_int(m.group(1))
-
-
 @dataclass
 class Record:
     rid: str                      # canonical id, e.g. "falcon::falcon_handleOps_userOp_e2e"
     category: str                 # usually equals scheme
     gas: Optional[int]            # gas_verify or gas_surface
     security_equiv_bits: Optional[int]      # denominator bits depending on metric
-    effective_security_bits: Optional[int]  # explicit or upstream-capped bits
+    effective_security_bits: Optional[int]  # if explicitly present (rare)
     depends_on: List[str]
     ts: str
     meta: Dict[str, Any]
@@ -118,9 +110,9 @@ class Record:
     def canonical_rid(obj: Dict[str, Any]) -> Optional[str]:
         """
         Canonical ID policy:
-        1) Prefer scheme::bench_name (repo canonical id)
-        2) Fallback to explicit ids (id/name/bench_id)
-        3) Fallback to bench_name alone
+        1) Prefer scheme::bench_name
+        2) Then fallback to explicit ids (id/name/bench_id)
+        3) Then fallback to bench_name alone
         IMPORTANT: do NOT use "surface" as id (collides).
         """
         scheme = obj.get("scheme") or obj.get("category")
@@ -139,7 +131,6 @@ class Record:
 
     @staticmethod
     def parse_security_bits(obj: Dict[str, Any]) -> Optional[int]:
-        # Preferred explicit field if present
         seb = obj.get("security_equiv_bits")
         if seb is not None:
             b = _as_int(seb)
@@ -176,18 +167,11 @@ class Record:
         gas_i = _as_int(gas)
 
         seb = Record.parse_security_bits(obj)
-
-        # 1) explicit field wins
         esb = _as_int(obj.get("effective_security_bits"))
-
-        # 2) otherwise accept upstream cap from notes (e.g., eff128=128)
-        if esb is None:
-            notes = _as_str(obj.get("notes"))
-            esb = _parse_eff_from_notes(notes)
 
         depends_on = obj.get("depends_on") or []
         if isinstance(depends_on, str):
-            depends_on = [depst := depends_on]
+            depends_on = [depends_on]
         depends_on = [str(x) for x in depends_on]
 
         ts = str(obj.get("ts_utc") or obj.get("timestamp") or obj.get("ts") or obj.get("time") or "")
@@ -243,14 +227,44 @@ def load_latest_records(jsonl_path: Path) -> Dict[str, Record]:
     return {rid: rec for rid, (_, __, rec) in latest.items()}
 
 
+def resolve_dep_rid(dep: str, records: Dict[str, Record]) -> str:
+    """
+    Resolve depends_on tokens to canonical rids.
+
+    Supported patterns:
+    - exact rid: "ecdsa::erc4337_bundler_ecdsa"
+    - short token: "erc4337_bundler_ecdsa" -> try "*::erc4337_bundler_ecdsa"
+      and try known prefixes "ecdsa::" etc.
+    """
+    dep = dep.strip()
+    if not dep:
+        return dep
+
+    if dep in records:
+        return dep
+
+    # If already scheme::name but not found, keep as-is
+    if "::" in dep:
+        return dep
+
+    # 1) suffix match: any rid endswith ::dep
+    suffix = f"::{dep}"
+    suffix_hits = [rid for rid in records.keys() if rid.endswith(suffix)]
+    if len(suffix_hits) == 1:
+        return suffix_hits[0]
+
+    # 2) known prefix tries
+    pref_hits = [f"{p}::{dep}" for p in KNOWN_DEP_PREFIXES if f"{p}::{dep}" in records]
+    if len(pref_hits) == 1:
+        return pref_hits[0]
+
+    # If ambiguous, keep original token (conservative; cap logic may still work if caller handles 0)
+    return dep
+
+
 def compute_effective_security_bits(records: Dict[str, Record]) -> Dict[str, int]:
     """
-    Weakest-link model: effective(r) = min( own(r), effective(dep1), ... ).
-
-    Policy:
-    - If a dependency is missing from the dataset, we do NOT cap to 0.
-      (Otherwise we'd introduce a false "0-bit" artifact.)
-    - Upstream cap can be encoded as Record.effective_security_bits (explicit or notes-derived).
+    Weakest-link model: effective(r) = min( own(r), effective(dep1), ...).
     """
     memo: Dict[str, int] = {}
     visiting: Set[str] = set()
@@ -278,11 +292,8 @@ def compute_effective_security_bits(records: Dict[str, Record]) -> Dict[str, int
 
         cap = own_bits(r)
         for dep in r.depends_on:
-            if dep not in records:
-                # Missing dep => do not artificially cap to 0
-                continue
-            cap = min(cap, dfs(dep))
-
+            dep_rid = resolve_dep_rid(dep, records)
+            cap = min(cap, dfs(dep_rid))
         memo[rid] = cap
         visiting.remove(rid)
         return cap
@@ -299,13 +310,16 @@ def find_cap_reason(r: Record, eff_map: Dict[str, int], records: Dict[str, Recor
     own = r.effective_security_bits if r.effective_security_bits is not None else r.security_equiv_bits
     if own is None:
         return None
+
     eff = eff_map.get(r.rid, 0)
     if eff >= int(own):
         return None
 
     for dep in r.depends_on:
-        if dep in records and eff_map.get(dep, 0) == eff:
-            return dep
+        dep_rid = resolve_dep_rid(dep, records)
+        if eff_map.get(dep_rid, 0) == eff:
+            return dep_rid
+
     return "depends_on"
 
 
@@ -366,8 +380,7 @@ def main() -> None:
 
     lines.append("")
     lines.append("Notes:")
-    lines.append("- `effective_security_bits` is conservative: it never exceeds the weakest dependency in `depends_on` (when that dependency is present in the dataset).")
-    lines.append("- Upstream caps may be encoded in records as `effective_security_bits` or in notes as `effNNN=MMM` (e.g., `eff128=128`).")
+    lines.append("- `effective_security_bits` is conservative: it never exceeds the weakest dependency in `depends_on`.")
     lines.append("- `H_min` surfaces are currently placeholders until the threat model is finalized (gas is measured).")
     lines.append("- `Target (bits)` is display-only: if a category is unknown, target falls back to `max(own_bits, effective_bits)`.")
     lines.append("")
@@ -378,3 +391,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

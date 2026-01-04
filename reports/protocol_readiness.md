@@ -19,7 +19,7 @@ python3 scripts/make_protocol_readiness.py
 | ecdsa | `ecdsa::l1_envelope_assumption` | 0 | 128 | 128 | - |  |
 | entropy | `entropy::randao_hash_based_assumption` | 0 | 128 | 128 | - |  |
 | falcon | `falcon::falcon_getUserOpHash_via_entry` | 218333 | 256 | 256 | - |  |
-| falcon | `falcon::falcon_handleOps_userOp_e2e` | 10966076 | 128 | 256 | - |  |
+| falcon | `falcon::falcon_handleOps_userOp_e2e` | 10966076 | 128 | 256 | ecdsa::l1_envelope_assumption | Capped by L1 ECDSA envelope assumption (PQ not enshrined end-to-end). |
 | falcon | `falcon::falcon_verifySignature_log` | 10336055 | 256 | 256 | - |  |
 | falcon | `falcon::qa_validateUserOp_userop_log` | 10589132 | 256 | 256 | - |  |
 | mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho0_log` | 1499354 | 128 | 192 | - |  |
@@ -30,8 +30,7 @@ python3 scripts/make_protocol_readiness.py
 | vrf_pq | `vrf_pq::pq_vrf_target_assumption` | 0 | 192 | 192 | - |  |
 
 Notes:
-- `effective_security_bits` is conservative: it never exceeds the weakest dependency in `depends_on` (when that dependency is present in the dataset).
-- Upstream caps may be encoded in records as `effective_security_bits` or in notes as `effNNN=MMM` (e.g., `eff128=128`).
+- `effective_security_bits` is conservative: it never exceeds the weakest dependency in `depends_on`.
 - `H_min` surfaces are currently placeholders until the threat model is finalized (gas is measured).
 - `Target (bits)` is display-only: if a category is unknown, target falls back to `max(own_bits, effective_bits)`.
 
