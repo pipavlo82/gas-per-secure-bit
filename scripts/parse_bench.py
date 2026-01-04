@@ -10,6 +10,31 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+# Canonical chain_profile normalization (dataset-wide)
+CHAIN_PROFILE_ALIASES = {
+    # L1
+    "evm-l1": "EVM/L1",
+    "evm/l1": "EVM/L1",
+    "evm_l1": "EVM/L1",
+    "l1": "EVM/L1",
+    "evm mainnet": "EVM/L1",
+    "evm-mainnet": "EVM/L1",
+    # L2
+    "evm-l2": "EVM/L2",
+    "evm/l2": "EVM/L2",
+    "evm_l2": "EVM/L2",
+    "l2": "EVM/L2",
+}
+
+
+def normalize_chain_profile(v: Any) -> str:
+    if v is None:
+        return "unknown"
+    s = str(v).strip()
+    if not s:
+        return "unknown"
+    return CHAIN_PROFILE_ALIASES.get(s.lower(), s)
+
 
 def root_dir() -> Path:
     # scripts/parse_bench.py -> repo root
@@ -125,7 +150,7 @@ def normalize_row(raw: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, An
     if not scheme or not bench_name:
         raise ValueError("Missing required fields: scheme and bench_name")
 
-    chain_profile = get_any(raw, ["chain_profile", "chain-profile"], "unknown")
+    chain_profile = normalize_chain_profile(get_any(raw, ["chain_profile", "chain-profile"], "unknown"))
     gas_verify = int(get_any(raw, ["gas_verify", "gas"], 0))
 
     sec_type = get_any(raw, ["security_metric_type", "security-type"], "unknown")
@@ -243,7 +268,7 @@ def regen_csv_from_jsonl(jsonl_path: Path, csv_path: Path) -> Tuple[int, int]:
                 continue
             rows.append(json.loads(line))
 
-    # Current repo schema: 16 cols
+    # Current repo schema: 19 cols
     fields = [
         "ts_utc",
         "repo",
@@ -264,7 +289,6 @@ def regen_csv_from_jsonl(jsonl_path: Path, csv_path: Path) -> Tuple[int, int]:
         "vector_pack_ref",
         "vector_pack_id",
         "vector_id",
-
     ]
 
     with csv_path.open("w", newline="", encoding="utf-8") as f:
