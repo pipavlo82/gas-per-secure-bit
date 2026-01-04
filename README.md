@@ -14,7 +14,7 @@
 ## Table of Contents
 
 - [Methodology (surfaces + weakest-link)](#methodology-surfaces--weakest-link)
-- [PQ aggregation surfaces (BLS → PQ)](#pq-aggregation-surfaces-bls--pq) 
+- [PQ aggregation surfaces (BLS → PQ) — why this matters](#pq-aggregation-surfaces-bls--pq--why-this-matters)
 - [Core Metric](#core-metric)
 - [Public Review Entry Points](#public-review-entry-points)
 - [Why This Exists](#why-this-exists)
