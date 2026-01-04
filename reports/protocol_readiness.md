@@ -44,6 +44,11 @@ These rows are produced by `scripts/run_vendor_mldsa.sh` and currently require p
 
 Note: the dataset currently records ML-DSA-65 rows with `security_metric_type=lambda_eff` and `value=128`. To avoid rewriting later, the table keeps that denominator, and `notes` additionally reports `security_equiv_bits=192` and `gas/bit@192` (= gas_verify/192).
 
+Vector pack (shared reference for these measurements):
+- `vector_pack_ref`: `pipavlo82/pqevm-vector-packs@05988be4f37394b21257d2b5e6c639b4746b698a:packs/mldsa65_fips204`
+- `vector_pack_id`: `5d3e99cb335072a30391f08655398b590634897d953a97d539a6c8e2d20183ed`
+- `vector_id`: `mldsa65_fips204_vector_001`
+
 Reproduce:
 
 ```bash
@@ -54,9 +59,9 @@ bash scripts/make_reports.sh
 
 | bench | gas_verify | denom | value | gas/bit | vendor commit | notes |
 |---|---:|---|---:|---:|---|---|
-| `verify_poc_foundry` | 68,901,612 | `lambda_eff` | 128 | 538,293.84375 | `d9aabc14cf13` | sec192=192 gpb192=358,862.5625 | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle=test_verify_gas_... |
-| `preA_compute_w_fromPackedA_ntt_rho0_log` | 1,499,354 | `lambda_eff` | 128 | 11,713.703125 | `d9aabc14cf13` | sec192=192 gpb192=7,809.135417 | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle=gas_compute_w_fr... |
-| `preA_compute_w_fromPackedA_ntt_rho1_log` | 1,499,354 | `lambda_eff` | 128 | 11,713.703125 | `d9aabc14cf13` | sec192=192 gpb192=7,809.135417 | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle=gas_compute_w_fr... |
+| `verify_poc_foundry` | 68,901,612 | `lambda_eff` | 128.0 | 538293.84375 | `d9aabc14cf13` | sec192=192 gpb192=358,862.5625 | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle... |
+| `preA_compute_w_fromPackedA_ntt_rho0_log` | 1,499,354 | `lambda_eff` | 128.0 | 11713.703125 | `d9aabc14cf13` | sec192=192 gpb192=7,809.135417 | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle... |
+| `preA_compute_w_fromPackedA_ntt_rho1_log` | 1,499,354 | `lambda_eff` | 128.0 | 11713.703125 | `d9aabc14cf13` | sec192=192 gpb192=7,809.135417 | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle... |
 <!-- MLDSA65_VENDOR_END -->
 
 <!-- FALCON_VENDOR_BEGIN -->

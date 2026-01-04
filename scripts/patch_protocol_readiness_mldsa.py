@@ -1,84 +1,86 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import argparse
 import json
-import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 BEGIN = "<!-- MLDSA65_VENDOR_BEGIN -->"
 END   = "<!-- MLDSA65_VENDOR_END -->"
 
-TARGET_SCHEME = "mldsa65"
-TARGET_REPO_SUBSTR = "ml-dsa-65-ethereum-verification"
-
-# "Real" ML-DSA-65 security-equivalent bits (Cat3) — keep it here so we
-# don’t have to rewrite the table later when dataset flips denom types.
-SEC_EQ_BITS = 192.0
-
-BENCHES = [
+# benches we want to surface in protocol_readiness
+WANT = [
     "verify_poc_foundry",
     "preA_compute_w_fromPackedA_ntt_rho0_log",
     "preA_compute_w_fromPackedA_ntt_rho1_log",
 ]
 
-def load_jsonl(p: Path) -> List[Dict[str, Any]]:
+def _load_jsonl(p: Path) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
-    for line in p.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        rows.append(json.loads(line))
+    with p.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            rows.append(json.loads(line))
     return rows
 
-def pick_latest(rows: List[Dict[str, Any]], bench: str) -> Optional[Dict[str, Any]]:
-    cand: List[Dict[str, Any]] = []
-    for r in rows:
-        if r.get("scheme") != TARGET_SCHEME:
-            continue
-        if r.get("bench_name") != bench:
-            continue
-        repo = str(r.get("repo", ""))
-        if TARGET_REPO_SUBSTR not in repo:
-            continue
-
-        # must be a real measurement
-        gv = r.get("gas_verify")
-        try:
-            if int(gv) <= 0:
-                continue
-        except Exception:
-            continue
-
-        cand.append(r)
-
-    if not cand:
-        return None
-
-    # Prefer newest ts_utc; ISO strings sort lexicographically if consistent
-    cand.sort(key=lambda x: str(x.get("ts_utc", "")))
-    return cand[-1]
-
-def fmt_int(n: Any) -> str:
+def _fmt_int(n: Any) -> str:
     try:
         return f"{int(n):,}"
     except Exception:
         return str(n)
 
-def fmt_float(x: Any) -> str:
+def _fmt_float(x: Any) -> str:
     try:
-        return f"{float(x):,.6f}".rstrip("0").rstrip(".")
+        # keep stable-ish display; don't over-format
+        return str(float(x))
     except Exception:
         return str(x)
 
-def safe_notes(s: str, max_len: int = 140) -> str:
-    s = (s or "").replace("\n", " ").strip()
-    if len(s) > max_len:
-        return s[: max_len - 3] + "..."
-    return s
+def _pick_latest_by_ts(rows: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    """
+    Return mapping bench_name -> selected row (latest by ts_utc).
+    """
+    out: Dict[str, Dict[str, Any]] = {}
+    for r in rows:
+        b = r.get("bench_name")
+        if b not in WANT:
+            continue
+        if r.get("scheme") != "mldsa65":
+            continue
+        ts = r.get("ts_utc", "")
+        prev = out.get(b)
+        if prev is None or str(ts) > str(prev.get("ts_utc", "")):
+            out[b] = r
+    return out
 
-def render_section(rows: List[Dict[str, Any]]) -> str:
-    latest = {b: pick_latest(rows, b) for b in BENCHES}
+def _ensure_markers(report_text: str) -> str:
+    """
+    If markers are missing entirely, append an empty marker block to the end.
+    If BEGIN exists but END doesn't, that's a hard error.
+    """
+    has_begin = BEGIN in report_text
+    has_end = END in report_text
 
+    if has_begin and not has_end:
+        raise SystemExit(f"Found {BEGIN} but missing {END} in report; refusing to patch.")
+
+    if not has_begin and not has_end:
+        # Append marker scaffold (so patching becomes idempotent)
+        if not report_text.endswith("\n"):
+            report_text += "\n"
+        report_text += "\n" + BEGIN + "\n" + END + "\n"
+        return report_text
+
+    # both present
+    return report_text
+
+def _build_block(selected: Dict[str, Dict[str, Any]]) -> str:
     lines: List[str] = []
+
+    lines.append(BEGIN)
     lines.append("## ML-DSA-65 (vendor / pinned ref) — measured points")
     lines.append("")
     lines.append(
@@ -88,11 +90,34 @@ def render_section(rows: List[Dict[str, Any]]) -> str:
     )
     lines.append("")
     lines.append(
-        "Note: the dataset currently records ML-DSA-65 rows with `security_metric_type=lambda_eff` and `value=128`. "
-        "To avoid rewriting later, the table keeps that denominator, and `notes` additionally reports "
-        f"`security_equiv_bits={int(SEC_EQ_BITS)}` and `gas/bit@{int(SEC_EQ_BITS)}` (= gas_verify/{int(SEC_EQ_BITS)})."
+        "Note: the dataset currently records ML-DSA-65 rows with `security_metric_type=lambda_eff` "
+        "and `value=128`. To avoid rewriting later, the table keeps that denominator, and `notes` "
+        "additionally reports `security_equiv_bits=192` and `gas/bit@192` (= gas_verify/192)."
     )
     lines.append("")
+
+    # Try to surface vector pack provenance (so it is searchable in the report).
+    vref = vid = vpack = None
+    for b in WANT:
+        r = selected.get(b)
+        if not r:
+            continue
+        if r.get("vector_pack_ref"):
+            vref = r.get("vector_pack_ref")
+            vpack = r.get("vector_pack_id")
+            vid = r.get("vector_id")
+            break
+
+    if vref or vpack or vid:
+        lines.append("Vector pack (shared reference for these measurements):")
+        if vref:
+            lines.append(f"- `vector_pack_ref`: `{vref}`")
+        if vpack:
+            lines.append(f"- `vector_pack_id`: `{vpack}`")
+        if vid:
+            lines.append(f"- `vector_id`: `{vid}`")
+        lines.append("")
+
     lines.append("Reproduce:")
     lines.append("")
     lines.append("```bash")
@@ -102,106 +127,75 @@ def render_section(rows: List[Dict[str, Any]]) -> str:
     lines.append("```")
     lines.append("")
 
-    # Table (unchanged columns)
     lines.append("| bench | gas_verify | denom | value | gas/bit | vendor commit | notes |")
     lines.append("|---|---:|---|---:|---:|---|---|")
 
-    for b in BENCHES:
-        r = latest[b]
-        if r is None:
-            lines.append(f"| `{b}` | *(missing)* |  |  |  |  |  |")
+    for bench in WANT:
+        r = selected.get(bench)
+        if not r:
+            lines.append(f"| `{bench}` | _missing_ |  |  |  |  |  |")
             continue
 
-        gas_i = int(r.get("gas_verify"))
-        gas = fmt_int(gas_i)
+        gas = r.get("gas_verify", "")
+        denom = r.get("security_metric_type", "")
+        val = r.get("security_metric_value", "")
+        gpb = r.get("gas_per_secure_bit", "")
+        commit = str(r.get("commit", ""))[:12]
+        notes = str(r.get("notes", ""))
 
-        denom_t = str(r.get("security_metric_type", ""))
-        denom_v = fmt_float(r.get("security_metric_value"))
-        gpb = fmt_float(r.get("gas_per_secure_bit"))
+        # sec192 normalization hint for ML-DSA-65
+        sec192 = 192
+        gpb192 = ""
+        try:
+            gpb192 = f"{(int(gas) / sec192):,.6f}".rstrip("0").rstrip(".")
+        except Exception:
+            gpb192 = ""
 
-        gpb192 = fmt_float(gas_i / SEC_EQ_BITS)
-
-        prov = r.get("provenance") or {}
-        vcommit = str(prov.get("commit") or r.get("commit") or "")
-        if len(vcommit) > 12:
-            vcommit = vcommit[:12]
-
-        base_notes = safe_notes(str(r.get("notes", "")), max_len=110)
-        # Put sec192 + gas/bit@192 early so it survives truncation.
-        notes = f"sec192={int(SEC_EQ_BITS)} gpb192={gpb192} | {base_notes}"
+        extra = f"sec192=192 gpb192={gpb192}" if gpb192 else "sec192=192"
 
         lines.append(
-            f"| `{b}` | {gas} | `{denom_t}` | {denom_v} | {gpb} | `{vcommit}` | {notes} |"
+            f"| `{bench}` | {_fmt_int(gas)} | `{denom}` | {_fmt_float(val)} | {_fmt_float(gpb)} | `{commit}` | {extra} | {notes[:90]}{'...' if len(notes)>90 else ''} |"
         )
 
-    lines.append("")
-    return "\n".join(lines).rstrip() + "\n"
+    lines.append(END)
+    return "\n".join(lines) + "\n"
 
-def upsert_block(doc: str, block: str) -> str:
-    """
-    Robustly ensure exactly ONE vendor block exists.
+def _patch_between_markers(report_text: str, new_block: str) -> str:
+    i = report_text.find(BEGIN)
+    j = report_text.find(END)
+    if i == -1 or j == -1 or j < i:
+        raise SystemExit(f"Markers not found in report. Expected {BEGIN} ... {END}")
 
-    Cases handled:
-      - BEGIN present but END missing  -> replace from BEGIN to EOF
-      - multiple BEGIN/END             -> replace from first BEGIN to last END
-      - neither present                -> append block at EOF
-    """
-    block_wrapped = f"{BEGIN}\n{block}{END}\n"
+    j_end = j + len(END)
+    before = report_text[:i].rstrip("\n") + "\n\n"
+    after = report_text[j_end:].lstrip("\n")
+    return before + new_block + "\n" + after
 
-    bcount = doc.count(BEGIN)
-    ecount = doc.count(END)
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--jsonl", default="data/results.jsonl")
+    ap.add_argument("--report", default="reports/protocol_readiness.md")
+    args = ap.parse_args()
 
-    if bcount == 0 and ecount == 0:
-        return doc.rstrip() + "\n\n" + block_wrapped
+    jsonl_path = Path(args.jsonl)
+    report_path = Path(args.report)
 
-    if bcount >= 1 and ecount == 0:
-        # dangling BEGIN: replace from first BEGIN to end-of-file
-        b = doc.find(BEGIN)
-        pre = doc[:b].rstrip() + "\n\n"
-        return pre + block_wrapped
+    if not jsonl_path.exists():
+        raise SystemExit(f"JSONL not found: {jsonl_path}")
+    if not report_path.exists():
+        raise SystemExit(f"Report not found: {report_path}")
 
-    if bcount == 0 and ecount >= 1:
-        # dangling END (rare): remove all END markers and append clean block
-        cleaned = doc.replace(END, "").rstrip()
-        return cleaned + "\n\n" + block_wrapped
+    rows = _load_jsonl(jsonl_path)
+    selected = _pick_latest_by_ts(rows)
 
-    # both present (possibly multiple)
-    b = doc.find(BEGIN)
-    e = doc.rfind(END)
-    if e < b:
-        # malformed ordering; fall back to append after cleaning all markers
-        cleaned = doc.replace(BEGIN, "").replace(END, "").rstrip()
-        return cleaned + "\n\n" + block_wrapped
+    report_text = report_path.read_text(encoding="utf-8")
+    report_text = _ensure_markers(report_text)
 
-    e_end = e + len(END)
-    pre = doc[:b].rstrip() + "\n\n"
-    post = doc[e_end:].lstrip()
+    new_block = _build_block(selected)
+    patched = _patch_between_markers(report_text, new_block)
 
-    out = pre + block_wrapped
-    if post:
-        out += "\n" + post
-    return out
-
-def main() -> int:
-    if len(sys.argv) != 3:
-        print(
-            "Usage: patch_protocol_readiness_mldsa.py <data/results.jsonl> <reports/protocol_readiness.md>",
-            file=sys.stderr,
-        )
-        return 2
-
-    jsonl_path = Path(sys.argv[1]).resolve()
-    md_path = Path(sys.argv[2]).resolve()
-
-    rows = load_jsonl(jsonl_path)
-    md = md_path.read_text(encoding="utf-8") if md_path.exists() else ""
-
-    section = render_section(rows)
-    md2 = upsert_block(md, section)
-
-    md_path.parent.mkdir(parents=True, exist_ok=True)
-    md_path.write_text(md2, encoding="utf-8")
-    return 0
+    report_path.write_text(patched, encoding="utf-8")
+    print(f"[patch] wrote {report_path}")
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
