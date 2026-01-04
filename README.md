@@ -19,6 +19,7 @@
 - [Why This Exists](#why-this-exists)
 - [New: Weakest-link + Protocol Readiness Surfaces](#new-weakest-link--protocol-readiness-surfaces)
 - [Reproducible Reports & Data Policy](#reproducible-reports--data-policy)
+- [Canonical test vectors + calldata packs](#canonical-test-vectors--calldata-packs)
 - [Measured Protocol Surfaces (EVM/L1)](#measured-protocol-surfaces-evml1)
 - [Chart](#chart)
 - [Current Dataset (EVM/L1) — Gas Snapshots](#current-dataset-evml1--gas-snapshots)
@@ -141,6 +142,17 @@ Reports:
 ## Reproducible Reports & Data Policy
 
 This repository follows a **single canonical source of truth** model for benchmark data and reports.
+
+## Canonical test vectors + calldata packs
+
+To keep benchmarks comparable across implementations, this repo treats test vectors and calldata conventions as **external, pinned artifacts**.
+
+Canonical packs live in **pqevm-vector-packs** (vectors + calldata shapes):
+- repo: https://github.com/pipavlo82/pqevm-vector-packs
+- purpose: single source of truth for (scheme, variant, packing, calldata) so different projects do not benchmark different conventions
+
+This repo may reference packs via dataset metadata fields (e.g. `vector_pack_ref`, `vector_pack_id`, `vector_id`) when available.
+
 
 ### Canonical Data
 
