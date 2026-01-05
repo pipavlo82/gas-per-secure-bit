@@ -14,13 +14,11 @@
 ## Table of Contents
 
 - [Methodology (surfaces + weakest-link)](#methodology-surfaces--weakest-link)
-- [PQ aggregation surfaces (BLS → PQ) — why this matters](#pq-aggregation-surfaces-bls--pq--why-this-matters)
 - [Core Metric](#core-metric)
 - [Public Review Entry Points](#public-review-entry-points)
 - [Why This Exists](#why-this-exists)
 - [New: Weakest-link + Protocol Readiness Surfaces](#new-weakest-link--protocol-readiness-surfaces)
 - [Reproducible Reports & Data Policy](#reproducible-reports--data-policy)
-- [Canonical test vectors + calldata packs](#canonical-test-vectors--calldata-packs)
 - [Measured Protocol Surfaces (EVM/L1)](#measured-protocol-surfaces-evml1)
 - [Chart](#chart)
 - [Current Dataset (EVM/L1) — Gas Snapshots](#current-dataset-evml1--gas-snapshots)
@@ -58,6 +56,12 @@ effective_security_bits = min(security_bits(dep_i))
 Where `security_bits(x)` is derived from records with `security_metric_type ∈ {security_equiv_bits, lambda_eff, H_min}`.
 
 This repo may record multiple denominators for the same bench (e.g., `lambda_eff` for conservative crypto strength and `security_equiv_bits` for declared normalization) as separate records; comparisons must state which denominator is used.
+
+### Gas extraction modes (snapshot vs logs)
+
+Some vendor harnesses expose gas via Foundry snapshot lines `(gas: N)`, while others print it via logs
+(e.g., `Gas used: N`). Runners support both via `scripts/extract_foundry_gas.py` using a per-run `needle`
+(e.g., `Gas used:`) so vendor repos do not need to be modified.
 
 ---
 
@@ -144,17 +148,6 @@ Reports:
 
 This repository follows a **single canonical source of truth** model for benchmark data and reports.
 
-## Canonical test vectors + calldata packs
-
-To keep benchmarks comparable across implementations, this repo treats test vectors and calldata conventions as **external, pinned artifacts**.
-
-Canonical packs live in **pqevm-vector-packs** (vectors + calldata shapes):
-- repo: https://github.com/pipavlo82/pqevm-vector-packs
-- purpose: single source of truth for (scheme, variant, packing, calldata) so different projects do not benchmark different conventions
-
-This repo may reference packs via dataset metadata fields (e.g. `vector_pack_ref`, `vector_pack_id`, `vector_id`) when available.
-
-
 ### Canonical Data
 
 - **`data/results.jsonl`** is the **only canonical input**.
@@ -192,7 +185,8 @@ This script will:
 - `scripts/parse_bench.py` — ingestion + `--regen` rebuilds `data/results.csv` from `data/results.jsonl`
 - `scripts/make_reports.sh` — runs sanity checks + regenerates all reports
 - `scripts/make_protocol_readiness.py` — generates `reports/protocol_readiness.md`
-- `scripts/patch_protocol_readiness_*.py` — inject vendor pinned-ref blocks (ML-DSA / Falcon / Dilithium)
+- `scripts/patch_protocol_readiness_*.py` — inject pinned vendor snapshots into `reports/protocol_readiness.md`
+  (markers: `MLDSA65_VENDOR_*`, `FALCON_VENDOR_*`, `ETHDILITHIUM_VENDOR_*`)
 
 ### CI Enforcement
 
@@ -224,10 +218,8 @@ For these entries, **gas is measured**, while the **security denominator** (e.g.
 
 Current measured surfaces:
 
-- `randao::l1_randao_mix_surface` — gas = **5820**, `H_min` = **32** (placeholder)
-- `randao::mix_for_sample_selection_surface` — gas = **13,081**, `H_min` = **32** (placeholder)  *(randomness access for DAS sample selection)*
-- `attestation::relay_attestation_surface` — gas = **43876**, `H_min` = **128** (placeholder)
-- `das::verify_sample_512b_surface` — gas = **2,464**, `das_sample_bits` = **4096**  *(512B sample verification surface)*
+- `randao::l1_randao_mix_surface` — gas = **5,993**, `H_min` = **32** (placeholder)
+- `attestation::relay_attestation_surface` — gas = **12,457**, `H_min` = **128** (placeholder)
 
 Reproduce measurements and refresh dataset + reports:
 
@@ -274,12 +266,10 @@ See also:
 
 ### Protocol Surfaces (measured)
 
-| Scheme          | Bench name                          | gas_verify | security_metric_value (bits) | gas / secure-bit |
-|-----------------|-------------------------------------|----------:|-----------------------------:|-----------------:|
-| **RANDAO**      | l1_randao_mix_surface               | 5,820     | 32 (H_min)                   | 181.875          |
-| **RANDAO**      | mix_for_sample_selection_surface    | 13,081    | 32 (H_min)                   | 408.781          |
-| **Attestation** | relay_attestation_surface           | 43,876    | 128 (H_min)                  | 342.781          |
-| **DAS**         | verify_sample_512b_surface          | 2,464     | 4096 (das_sample_bits)       | 0.602            |
+| Scheme          | Bench name                    | gas_verify  | security_metric_value (bits) | gas / secure-bit |
+|-----------------|-------------------------------|------------:|-----------------------------:|-----------------:|
+| **RANDAO**      | l1_randao_mix_surface         | 5,993       | 32 (H_min)                   | 187.281          |
+| **Attestation** | relay_attestation_surface     | 12,457      | 128 (H_min)                  | 97.320           |
 
 **Note:** Protocol surfaces use `security_metric_type=H_min`; the current H_min values are declared placeholders until the threat model is pinned down. Gas numbers are measured; denominators are provisional. For surfaces, `gas_verify` denotes the measured gas of the surface operation/harness.
 
@@ -304,7 +294,7 @@ A reproducible benchmark lab with:
 
 ### Runners (Reproducible Ingestion)
 - `scripts/run_vendor_mldsa.sh` — ML-DSA-65 (Foundry gas + log extraction for PreA)
-- `scripts/run_vendor_dilithium_ethdilithium.sh` — Dilithium (ZKNoxHQ/ETHDILITHIUM) benches
+- `scripts/run_vendor_ethdilithium.sh` — Dilithium (ZKNoxHQ/ETHDILITHIUM) benches
 - `scripts/run_vendor_quantumaccount.sh` — QuantumAccount (Falcon) benches + log-based gas extraction
 - `scripts/run_ecdsa.sh` — ECDSA baselines (ecrecover, bytes65 wrapper, ERC-1271)
 - `scripts/run_protocol_surfaces.sh` — measures protocol surfaces gas (RANDAO mix + relay attestation), replaces old records, regenerates reports
@@ -384,6 +374,9 @@ This repo separates:
 | **Falcon-1024** | Category 5 | 256 | classical-equivalent convention |
 
 **Important:** These are normalization conventions, not security proofs. The rule is that they are explicit and applied consistently.
+
+**Dilithium normalization** is parameter-set dependent (e.g., Dilithium2/3/5). Until the vendor variant is pinned to a
+declared set, ETHDILITHIUM rows are recorded with `lambda_eff=128` for budgeting comparability.
 
 ### Optional Baseline Normalization (Separate Metric)
 
@@ -465,17 +458,17 @@ ls -la reports/
 Vendor runners append measurements into `data/results.jsonl` with explicit provenance, then regenerate reports.
 
 ```bash
-# ML-DSA-65
+# ML-DSA-65 (pinned ref)
 export MLDSA_REF=feature/mldsa-ntt-opt-phase12-erc7913-packedA
 bash scripts/run_vendor_mldsa.sh
 
-# Dilithium (ZKNoxHQ/ETHDILITHIUM)
-bash scripts/run_vendor_dilithium_ethdilithium.sh
+# Dilithium (ZKNoxHQ/ETHDILITHIUM, pinned commit by default in the runner)
+bash scripts/run_vendor_ethdilithium.sh
 
-# Falcon / QuantumAccount
+# Falcon / QuantumAccount (if present)
 bash scripts/run_vendor_quantumaccount.sh
 
-# Rebuild CSV + reports
+# Rebuild CSV + reports (and inject vendor blocks)
 bash scripts/make_reports.sh
 ```
 
@@ -499,7 +492,7 @@ Ingested benches (EVM/L1 gas snapshots from the vendor repo):
 - `ethdilithium_verify_evmfriendly` — EVM-friendly Dilithium verify variant (optimized for EVM constraints).
 
 Runner:
-- `scripts/run_vendor_dilithium_ethdilithium.sh`
+- `scripts/run_vendor_ethdilithium.sh`
 
 ### Falcon / QuantumAccount (vendor + local copy)
 Ingested benches:
@@ -513,9 +506,7 @@ Local microbench copy:
 
 ### Protocol Surfaces (measured)
 - `randao::l1_randao_mix_surface` — Foundry gas harness (measured)
-- `randao::mix_for_sample_selection_surface` — Foundry gas harness (measured)
 - `attestation::relay_attestation_surface` — Foundry gas harness (measured)
-- `das::verify_sample_512b_surface` — Foundry gas harness (measured)
 
 ---
 
