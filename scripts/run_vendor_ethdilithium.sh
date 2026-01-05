@@ -26,7 +26,11 @@ fi
 cd "${REPO_DIR}"
 git fetch --all --prune
 git checkout "${REF}"
-git pull --ff-only || true
+if git symbolic-ref -q HEAD >/dev/null; then
+  git pull --ff-only || true
+else
+  echo "[info] detached HEAD after checkout (${REF}); skip git pull"
+fi
 
 VENDOR_COMMIT="$(git rev-parse HEAD 2>/dev/null || echo unknown)"
 VENDOR_REPO_NAME="${VENDOR_REPO}"
