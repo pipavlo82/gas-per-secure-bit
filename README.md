@@ -21,6 +21,7 @@
 - [New: Weakest-link + Protocol Readiness Surfaces](#new-weakest-link--protocol-readiness-surfaces)
 - [Reproducible Reports & Data Policy](#reproducible-reports--data-policy)
 - [Gas extraction modes (snapshot vs logs)](#gas-extraction-modes-snapshot-vs-logs)
+- [XOF Vector Suite (Keccak-CTR vs FIPS SHAKE)](#xof-vector-suite-keccak-ctr-vs-fips-shake)
 - [Canonical test vectors + calldata packs](#canonical-test-vectors--calldata-packs)
 - [Measured Protocol Surfaces (EVM/L1)](#measured-protocol-surfaces-evml1)
 - [Chart](#chart)
@@ -107,7 +108,8 @@ If you have 10 minutes:
 1. [reports/protocol_readiness.md](reports/protocol_readiness.md) — protocol constraints and why "gas/verify" can be misleading.
 2. [spec/case_catalog.md](spec/case_catalog.md) + [spec/case_graph.md](spec/case_graph.md) — AA weakest-link (envelope dominance) cases + canonical graphs.
 3. [spec/gas_per_secure_bit.md](spec/gas_per_secure_bit.md) — definitions, normalization rules, reporting conventions.
-4. [data/results.jsonl](data/results.jsonl) — canonical dataset (CSV + reports are deterministically rebuilt from it).
+4. [spec/xof_vector_suite.md](spec/xof_vector_suite.md) + [data/vectors/xof_vectors.json](data/vectors/xof_vectors.json) — canonical XOF wiring vectors (FIPS SHAKE + Keccak-CTR).
+5. [data/results.jsonl](data/results.jsonl) — canonical dataset (CSV + reports are deterministically rebuilt from it).
 
 ---
 
@@ -222,6 +224,33 @@ Multiple records may exist for the same benchmark under different `chain_profile
 These represent execution-equivalent measurements with different fee or threat-model contexts:
 - **EVM execution gas is assumed equal** across profiles
 - **Data availability / calldata pricing differs** by chain
+
+---
+
+## XOF Vector Suite (Keccak-CTR vs FIPS SHAKE)
+
+To prevent "silent convention drift" across PQ verifier implementations, this repo includes a small **XOF wiring
+vector suite** that covers both common EVM-relevant approaches:
+
+- **FIPS SHAKE128/SHAKE256** (standard / precompile-friendly)
+- **Keccak-CTR-style XOF** (EVM-constrained / gas-oriented)
+
+### Files
+- Spec: `spec/xof_vector_suite.md`
+- Vectors: `data/vectors/xof_vectors.json`
+- Verifier: `scripts/verify_vectors.py`
+
+### Run locally
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+python scripts/verify_vectors.py data/vectors/xof_vectors.json
+```
+
+### CI
+A dedicated workflow validates vectors on every PR:
+- `.github/workflows/vectors.yml`
 
 ---
 
