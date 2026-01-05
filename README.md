@@ -14,11 +14,14 @@
 ## Table of Contents
 
 - [Methodology (surfaces + weakest-link)](#methodology-surfaces--weakest-link)
+- [PQ aggregation surfaces (BLS → PQ) — why this matters](#pq-aggregation-surfaces-bls--pq--why-this-matters)
 - [Core Metric](#core-metric)
 - [Public Review Entry Points](#public-review-entry-points)
 - [Why This Exists](#why-this-exists)
 - [New: Weakest-link + Protocol Readiness Surfaces](#new-weakest-link--protocol-readiness-surfaces)
 - [Reproducible Reports & Data Policy](#reproducible-reports--data-policy)
+- [Gas extraction modes (snapshot vs logs)](#gas-extraction-modes-snapshot-vs-logs)
+- [Canonical test vectors + calldata packs](#canonical-test-vectors--calldata-packs)
 - [Measured Protocol Surfaces (EVM/L1)](#measured-protocol-surfaces-evml1)
 - [Chart](#chart)
 - [Current Dataset (EVM/L1) — Gas Snapshots](#current-dataset-evml1--gas-snapshots)
@@ -148,6 +151,17 @@ Reports:
 
 This repository follows a **single canonical source of truth** model for benchmark data and reports.
 
+## Canonical test vectors + calldata packs
+
+To keep benchmarks comparable across implementations, this repo treats test vectors and calldata conventions as **external, pinned artifacts**.
+
+Canonical packs live in **pqevm-vector-packs** (vectors + calldata shapes):
+- repo: https://github.com/pipavlo82/pqevm-vector-packs
+- purpose: single source of truth for (scheme, variant, packing, calldata) so different projects do not benchmark different conventions
+
+This repo may reference packs via dataset metadata fields (e.g. `vector_pack_ref`, `vector_pack_id`, `vector_id`) when available.
+
+
 ### Canonical Data
 
 - **`data/results.jsonl`** is the **only canonical input**.
@@ -218,8 +232,10 @@ For these entries, **gas is measured**, while the **security denominator** (e.g.
 
 Current measured surfaces:
 
-- `randao::l1_randao_mix_surface` — gas = **5,993**, `H_min` = **32** (placeholder)
-- `attestation::relay_attestation_surface` — gas = **12,457**, `H_min` = **128** (placeholder)
+- `randao::l1_randao_mix_surface` — gas = **5,820**, `H_min` = **32** (placeholder)
+- `randao::mix_for_sample_selection_surface` — gas = **13,081**, `H_min` = **32** (placeholder)  *(randomness access for DAS sample selection)*
+- `attestation::relay_attestation_surface` — gas = **43,876**, `H_min` = **128** (placeholder)
+- `das::verify_sample_512b_surface` — gas = **2,464**, `das_sample_bits` = **4096**  *(512B sample verification surface)*
 
 Reproduce measurements and refresh dataset + reports:
 
@@ -266,12 +282,14 @@ See also:
 
 ### Protocol Surfaces (measured)
 
-| Scheme          | Bench name                    | gas_verify  | security_metric_value (bits) | gas / secure-bit |
-|-----------------|-------------------------------|------------:|-----------------------------:|-----------------:|
-| **RANDAO**      | l1_randao_mix_surface         | 5,993       | 32 (H_min)                   | 187.281          |
-| **Attestation** | relay_attestation_surface     | 12,457      | 128 (H_min)                  | 97.320           |
+| Scheme          | Bench name                          | gas_verify | security_metric_value (bits) | gas / secure-bit |
+|-----------------|-------------------------------------|----------:|-----------------------------:|-----------------:|
+| **RANDAO**      | l1_randao_mix_surface               | 5,820     | 32 (H_min)                   | 181.875          |
+| **RANDAO**      | mix_for_sample_selection_surface    | 13,081    | 32 (H_min)                   | 408.781          |
+| **Attestation** | relay_attestation_surface           | 43,876    | 128 (H_min)                  | 342.781          |
+| **DAS**         | verify_sample_512b_surface          | 2,464     | 4096 (das_sample_bits)       | 0.602            |
 
-**Note:** Protocol surfaces use `security_metric_type=H_min`; the current H_min values are declared placeholders until the threat model is pinned down. Gas numbers are measured; denominators are provisional. For surfaces, `gas_verify` denotes the measured gas of the surface operation/harness.
+**Note:** Protocol surfaces use `security_metric_type=H_min`; the current H_min values are declared placeholders until the threat model is pinned down. Gas numbers are measured; denominators are provisional. For surfaces, `gas_verify` denotes the measured gas of the surface operation/harness. For `das_sample_bits`, the denominator is not security bits but data size (512 bytes × 8 = 4096 bits), so this represents "gas per verified data bit" (budgeting), not "gas per secure-bit".
 
 **Dataset currently stores ML-DSA rows as `lambda_eff=128`; the 192-bit normalization is shown in reports vendor block / notes.**
 
@@ -510,7 +528,9 @@ Local microbench copy:
 
 ### Protocol Surfaces (measured)
 - `randao::l1_randao_mix_surface` — Foundry gas harness (measured)
+- `randao::mix_for_sample_selection_surface` — Foundry gas harness (measured)
 - `attestation::relay_attestation_surface` — Foundry gas harness (measured)
+- `das::verify_sample_512b_surface` — Foundry gas harness (measured)
 
 ---
 
