@@ -186,7 +186,7 @@ This script will:
 - `scripts/make_reports.sh` — runs sanity checks + regenerates all reports
 - `scripts/make_protocol_readiness.py` — generates `reports/protocol_readiness.md`
 - `scripts/patch_protocol_readiness_*.py` — inject pinned vendor snapshots into `reports/protocol_readiness.md`
-  (markers: `MLDSA65_VENDOR_*`, `FALCON_VENDOR_*`, `ETHDILITHIUM_VENDOR_*`)
+  (markers: `MLDSA65_VENDOR_*`, `FALCON_VENDOR_*`, `ETHDILITHIUM_VENDOR_*`; invoked from `scripts/make_reports.sh`)
 
 ### CI Enforcement
 
@@ -378,6 +378,9 @@ This repo separates:
 **Dilithium normalization** is parameter-set dependent (e.g., Dilithium2/3/5). Until the vendor variant is pinned to a
 declared set, ETHDILITHIUM rows are recorded with `lambda_eff=128` for budgeting comparability.
 
+When `security_metric_type=lambda_eff`, the resulting `gas_per_secure_bit` column should be interpreted as a budgeting
+ratio (gas per assumed baseline), not a claim of equivalent classical security.
+
 ### Optional Baseline Normalization (Separate Metric)
 
 If you want "per 128-bit baseline" as a convenience view:
@@ -488,8 +491,9 @@ bash scripts/make_reports.sh
 ### Dilithium (vendor: ZKNoxHQ/ETHDILITHIUM)
 Ingested benches (EVM/L1 gas snapshots from the vendor repo):
 
-- `dilithium_verify_nistkat` — NIST-shape Dilithium verify (baseline, "spec-shaped" implementation).
-- `ethdilithium_verify_evmfriendly` — EVM-friendly Dilithium verify variant (optimized for EVM constraints).
+- `ethdilithium_eth_verify_log` — Dilithium verify (ETH mode), gas extracted from logs
+- `ethdilithium_nist_verify_log` — Dilithium verify (NIST mode), gas extracted from logs
+- `ethdilithium_p256verify_log` — P-256 verify microbench (log-based) included by the vendor repo
 
 Runner:
 - `scripts/run_vendor_ethdilithium.sh`
