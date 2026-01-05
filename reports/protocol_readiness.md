@@ -12,6 +12,8 @@ python3 scripts/make_protocol_readiness.py
 | attestation | `attestation::relay_attestation_surface` | 43876 | 128 | 128 | - |  |
 | das | `das::verify_sample_512b_surface` | 2464 | 4096 | 128 | - |  |
 | dilithium | `dilithium::dilithium_verify_nistkat` | 20161676 | 128 | 128 | - |  |
+| dilithium | `dilithium::ethdilithium_eth_verify_log` | 13493048 | 128 | 128 | - |  |
+| dilithium | `dilithium::ethdilithium_nist_verify_log` | 20155935 | 128 | 128 | - |  |
 | dilithium | `dilithium::ethdilithium_verify_evmfriendly` | 13495423 | 128 | 128 | - |  |
 | ecdsa | `ecdsa::ecdsa_erc1271_isValidSignature_foundry` | 21413 | 128 | 128 | - |  |
 | ecdsa | `ecdsa::ecdsa_verify_bytes65_foundry` | 24032 | 128 | 128 | - |  |
@@ -25,6 +27,7 @@ python3 scripts/make_protocol_readiness.py
 | mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho0_log` | 1499354 | 128 | 192 | - |  |
 | mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho1_log` | 1499354 | 128 | 192 | - |  |
 | mldsa65 | `mldsa65::verify_poc_foundry` | 68901612 | 128 | 192 | - |  |
+| p256 | `p256::ethdilithium_p256verify_log` | 22124 | 128 | 128 | - |  |
 | randao | `randao::l1_randao_mix_surface` | 5820 | 32 | 128 | - |  |
 | randao | `randao::mix_for_sample_selection_surface` | 13081 | 32 | 128 | - |  |
 | vrf_pq | `vrf_pq::pq_vrf_target_assumption` | 0 | 192 | 192 | - |  |
@@ -76,18 +79,22 @@ Notes:
 - `security_equiv_bits = 256` is used as the Falcon-1024 normalization denominator in this repo.
 <!-- FALCON_VENDOR_END -->
 
-<!-- DILITHIUM_VENDOR_BEGIN -->
-### Dilithium vendor (ZKNoxHQ/ETHDILITHIUM) — pinned ref
 
-| bench | gas | security_metric | bits | gas/bit | repo@commit | security_model | notes |
-|---|---:|---|---:|---:|---|---|---|
-| `dilithium_verify_nistkat` | 20,161,676 | `security_equiv_bits` | 128 | 157513.09375 | `ZKNoxHQ/ETHDILITHIUM`@`df999ed4f80` | `standalone` | sec128=128 gpb128=157513.09375; path-pinned; Foundry: test/ZKNOX_dilithiumKATS.t.sol:testVerify |
-| `ethdilithium_verify_evmfriendly` | 13,495,423 | `security_equiv_bits` | 128 | 105432.9921875 | `ZKNoxHQ/ETHDILITHIUM`@`df999ed4f80` | `standalone` | sec128=128 gpb128=105432.9921875; path-pinned; Foundry: test/ZKNOX_ethdilithiumKAT.t.sol:testVerify |
+<!-- ETHDILITHIUM_VENDOR_BEGIN -->
+
+### Vendor snapshot: ZKNoxHQ/ETHDILITHIUM
+
+- Source: `ZKNoxHQ/ETHDILITHIUM` (pinned by commit)
+- Runner: `scripts/run_vendor_ethdilithium.sh` (log-extracted `Gas used:`; excludes FFI-based tests like `testVerifyShorter()`)
+
+| bench_name | scheme | description | gas_verify | security_metric | value | gas/bit | vendor_commit | vendor_path | notes |
+|---|---:|---|---:|---|---:|---:|---|---|---|
+| `ethdilithium_eth_verify_log` | `dilithium` | verify (ETH mode, log) | 13,493,048 | `lambda_eff` | 128 | 105414.4375 | `df999ed4f803` | `vendors/ETHDILITHIUM` | ETHDILITHIUM (ETH mode) (ref=df999ed4f8032d26d9d3d22748407afbb7978ae7; path=test/ZKNOX_ethdilithium.t.sol; ... |
+| `ethdilithium_nist_verify_log` | `dilithium` | verify (NIST mode, log) | 20,155,935 | `lambda_eff` | 128 | 157468.242188 | `df999ed4f803` | `vendors/ETHDILITHIUM` | ETHDILITHIUM (NIST mode) (ref=df999ed4f8032d26d9d3d22748407afbb7978ae7; path=test/ZKNOX_dilithium.t.sol; ma... |
+| `ethdilithium_p256verify_log` | `p256` | P-256 verify micro (log) | 22,124 | `lambda_eff` | 128 | 172.84375 | `df999ed4f803` | `vendors/ETHDILITHIUM` | ETHDILITHIUM P-256 verify micro (ref=df999ed4f8032d26d9d3d22748407afbb7978ae7; path=test/ZKNOX_p256verify.t... |
 
 Notes:
-- Vendor is pinned by commit in dataset: `ZKNoxHQ/ETHDILITHIUM`@`df999ed4f80`.
-- `dilithium_verify_nistkat` is the NIST-shape verifier in the vendor repo.
-- `ethdilithium_verify_evmfriendly` is the EVM-friendly variant in the same vendor repo.
-- Recorded points are signature verification only (sig::verify); AA end-to-end surfaces (validateUserOp/handleOps) are not yet measured for this vendor.
-- Denominator here uses `security_equiv_bits` (override SEC_BITS_* in the runner if you confirm a different category).
-<!-- DILITHIUM_VENDOR_END -->
+- `lambda_eff=128` here is a budgeting denominator (not a finalized security-equivalence mapping for Dilithium variants).
+- If/when we normalize Dilithium to `security_equiv_bits`, we will add `secXXX=...` and `gpbXXX=...` annotations similar to MLDSA65.
+
+<!-- ETHDILITHIUM_VENDOR_END -->

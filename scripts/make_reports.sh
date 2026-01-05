@@ -75,10 +75,10 @@ else
 fi
 
 # Post-process: inject Dilithium vendor measurements (pinned ref)
-if test -f scripts/patch_protocol_readiness_dilithium.py; then
-  python3 scripts/patch_protocol_readiness_dilithium.py data/results.jsonl reports/protocol_readiness.md
+if test -f scripts/patch_protocol_readiness_ethdilithium.py; then
+  python3 scripts/patch_protocol_readiness_ethdilithium.py --jsonl data/results.jsonl --report reports/protocol_readiness.md
 else
-  echo "WARN: scripts/patch_protocol_readiness_dilithium.py not found; skipping"
+  echo "WARN: scripts/patch_protocol_readiness_ethdilithium.py not found; skipping"
 fi
 
 echo "Done."
