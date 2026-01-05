@@ -32,3 +32,6 @@ bench/quantumaccount/
 
 .tmp/
 vendor/
+
+# Python venv
+.venv/

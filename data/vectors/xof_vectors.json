@@ -1,0 +1,38 @@
+{
+    "suite": "evm-pq-xof-vectors",
+    "version": 1,
+    "vectors": [
+        {
+            "id": "demo.fips_shake128.seed0.domain_TEST_XOF.64B",
+            "xof_profile": "fips_shake128",
+            "seed_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+            "domain_sep": "TEST|XOF",
+            "out_len": 64,
+            "expected_hex": "9a60a332aec9fde2b78b8d068b052c53cfdf67d1449a181e095b907ced31ce5a122793a32b6fde9b9838305b37d6d166c35f9bf4f82a019900a72c30a6cb63df"
+        },
+        {
+            "id": "demo.fips_shake256.seed0.domain_TEST_XOF.64B",
+            "xof_profile": "fips_shake256",
+            "seed_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+            "domain_sep": "TEST|XOF",
+            "out_len": 64,
+            "expected_hex": "7855787a56aa2ab60c93f024bb57ed536e60b555c875d6e701e642f8ac107cc5f9a72999b4d8917f4d0f35c50be517e6d716a768d9ba90ee953e0fc7750101e9"
+        },
+        {
+            "id": "demo.keccak_ctr_xof128.seed0.domain_TEST_XOF.64B",
+            "xof_profile": "keccak_ctr_xof128",
+            "seed_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+            "domain_sep": "TEST|XOF",
+            "out_len": 64,
+            "expected_hex": "d1dd29ff921b478be07bf4d3ff754d59be283ad9245359729d5693ead7c161ef26b9ff37ad6e9177dde7771193d45436ec249f624da652a5b97a59996f9bfa3d"
+        },
+        {
+            "id": "demo.keccak_ctr_xof256.seed0.domain_TEST_XOF.64B",
+            "xof_profile": "keccak_ctr_xof256",
+            "seed_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+            "domain_sep": "TEST|XOF",
+            "out_len": 64,
+            "expected_hex": "4ca523f83db938449dcce190efb5fd47f779a34541e2f6e865991e04c837fe1ef2c68ddb523188e343e9fb4c82cbb99929beef2259903b1de2b06d4ad2709336"
+        }
+    ]
+}

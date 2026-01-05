@@ -1,0 +1,27 @@
+name: vectors
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  xof-vector-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: |
+          python -m pip install -U pip
+          python -m pip install -r requirements.txt
+
+      - name: Verify XOF vectors
+        run: |
+          python scripts/verify_vectors.py data/vectors/xof_vectors.json
