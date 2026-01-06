@@ -31,6 +31,7 @@
 - [Dataset Schema (CSV)](#dataset-schema-csv)
 - [Security Normalization (Explicit Assumptions)](#security-normalization-explicit-assumptions)
 - [Quick Start](#quick-start)
+- [PreA Convention (ML-DSA-65)](#prea-convention-ml-dsa-65)
 - [Vendor benchmarks (pinned refs)](#vendor-benchmarks-pinned-refs)
 - [Benchmarks Included](#benchmarks-included)
 - [Related Work / References](#related-work--references)
@@ -503,6 +504,43 @@ ls -la reports/
 
 ---
 
+## PreA Convention (ML-DSA-65)
+
+For benchmarks using precomputed `A_ntt` matrices, this repo follows a canonical calldata layout and provides
+on-chain execution proofs for reproducibility.
+
+### Documentation
+- **PreA (packedA_ntt) convention:** [docs/preA_packedA_ntt.md](docs/preA_packedA_ntt.md)
+- **On-chain proof runner:** `script/RunPreAOnChain.s.sol`
+
+### How to reproduce (local anvil)
+
+```bash
+# Terminal 1: Start local chain
+anvil
+
+# Terminal 2: Run on-chain proof script
+forge script script/RunPreAOnChain.s.sol:RunPreAOnChain \
+  --rpc-url http://127.0.0.1:8545 \
+  --private-key $PK \
+  --broadcast -vv
+```
+
+### Expected logs
+```
+gas_compute_w_fromPacked_A_ntt(rho0) 1499354
+gas_compute_w_fromPacked_A_ntt(rho1) 1499354
+```
+
+This provides a **wiring-consistency proof**: the same `packedA_ntt` construction used in the microbench
+is executed on-chain and produces identical rho0/rho1 measurements, with broadcast artifacts saved for audit.
+
+See also:
+- Broadcast artifact: `vendors/ml-dsa-65-ethereum-verification/broadcast/RunPreAOnChain.s.sol/31337/run-latest.json`
+- Deployed runner contract: `0xe7f1725e7734ce288f8367e1bb143e90bb3f0512` (anvil, chainId=31337)
+
+---
+
 ## Vendor benchmarks (pinned refs)
 
 Vendor runners append measurements into `data/results.jsonl` with explicit provenance, then regenerate reports.
@@ -544,26 +582,6 @@ Ingested benches (EVM/L1 gas snapshots from the vendor repo):
 
 Runner:
 - `scripts/run_vendor_ethdilithium.sh`
-- 
-### On-chain proof (local chain / reproducibility): PreA compute_w from packedA_ntt
-
-Besides log/snapshot-based measurements, we provide an **on-chain execution proof** for the PreA microbench,
-executed as **real transactions** on a local EVM chain (anvil, `chainId=31337`) using Foundry scripting.
-
-- Script: `vendors/ml-dsa-65-ethereum-verification/script/RunPreAOnChain.s.sol`
-- Deployed runner contract: `0xe7f1725e7734ce288f8367e1bb143e90bb3f0512` (anvil)
-- On-chain logs (deterministic):
-  - `gas_compute_w_fromPacked_A_ntt(rho0) = 1,499,354`
-  - `gas_compute_w_fromPacked_A_ntt(rho1) = 1,499,354`
-- Transactions (chainId=31337):
-  - `0xa885b619f5cb50bcc66ac38f9ea0d6b740f4e9bc1bbf1cfeb79114c5133335bd`
-  - `0x9afe3e848f620af88c5c478b3f8f5de3e46da7b17a27ddd3c20b2afe262a5905`
-  - `0x6e4b00c5012233a16e8fcbb14eb586d1735de17e8dfb8995c85dd8072d04672a`
-- Broadcast artifact:
-  - `vendors/ml-dsa-65-ethereum-verification/broadcast/RunPreAOnChain.s.sol/31337/run-latest.json`
-
-This is meant as a **wiring-consistency proof**: the same `packedA_ntt` construction used in the microbench
-is executed on-chain and produces identical rho0/rho1 measurements, with broadcast artifacts saved for audit.
 
 ### Falcon / QuantumAccount (vendor + local copy)
 Ingested benches:
