@@ -7,35 +7,36 @@ Reproduce:
 python3 scripts/make_protocol_readiness.py
 ```
 
-| Category | Surface | Gas | effective_security_bits | Target (bits) | Capped by | Blocker |
-|---|---|---:|---:|---:|---|---|
-| attestation | `attestation::relay_attestation_surface` | 43876 | 128 | 128 | - |  |
-| das | `das::verify_sample_512b_surface` | 2464 | 4096 | 128 | - |  |
-| dilithium | `dilithium::dilithium_verify_nistkat` | 20161676 | 128 | 128 | - |  |
-| dilithium | `dilithium::ethdilithium_eth_verify_log` | 13493048 | 128 | 128 | - |  |
-| dilithium | `dilithium::ethdilithium_nist_verify_log` | 20155935 | 128 | 128 | - |  |
-| dilithium | `dilithium::ethdilithium_verify_evmfriendly` | 13495423 | 128 | 128 | - |  |
-| ecdsa | `ecdsa::ecdsa_erc1271_isValidSignature_foundry` | 21413 | 128 | 128 | - |  |
-| ecdsa | `ecdsa::ecdsa_verify_bytes65_foundry` | 24032 | 128 | 128 | - |  |
-| ecdsa | `ecdsa::ecdsa_verify_ecrecover_foundry` | 21126 | 128 | 128 | - |  |
-| ecdsa | `ecdsa::l1_envelope_assumption` | 0 | 128 | 128 | - |  |
-| entropy | `entropy::randao_hash_based_assumption` | 0 | 128 | 128 | - |  |
-| falcon | `falcon::falcon_getUserOpHash_via_entry` | 218333 | 256 | 256 | - |  |
-| falcon | `falcon::falcon_handleOps_userOp_e2e` | 10966076 | 128 | 256 | ecdsa::l1_envelope_assumption | Capped by L1 ECDSA envelope assumption (PQ not enshrined end-to-end). |
-| falcon | `falcon::falcon_verifySignature_log` | 10336055 | 256 | 256 | - |  |
-| falcon | `falcon::qa_validateUserOp_userop_log` | 10589132 | 256 | 256 | - |  |
-| mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho0_log` | 1499354 | 128 | 192 | - |  |
-| mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho1_log` | 1499354 | 128 | 192 | - |  |
-| mldsa65 | `mldsa65::verify_poc_foundry` | 68901612 | 128 | 192 | - |  |
-| p256 | `p256::ethdilithium_p256verify_log` | 22124 | 128 | 128 | - |  |
-| randao | `randao::l1_randao_mix_surface` | 5820 | 32 | 128 | - |  |
-| randao | `randao::mix_for_sample_selection_surface` | 13081 | 32 | 128 | - |  |
-| vrf_pq | `vrf_pq::pq_vrf_target_assumption` | 0 | 192 | 192 | - |  |
+| Category | Surface | Gas | effective_security_bits | Target (bits) | Verified | Capped by | Blocker |
+|---|---|---:|---:|---:|---|---|---|
+| attestation | `attestation::relay_attestation_surface` | 43876 | 128 | 128 | - | - |  |
+| das | `das::verify_sample_512b_surface` | 2464 | 4096 | 128 | - | - |  |
+| dilithium | `dilithium::dilithium_verify_nistkat` | 20161676 | 128 | 128 | - | - |  |
+| dilithium | `dilithium::ethdilithium_eth_verify_log` | 13493048 | 128 | 128 | - | - |  |
+| dilithium | `dilithium::ethdilithium_nist_verify_log` | 20155935 | 128 | 128 | - | - |  |
+| dilithium | `dilithium::ethdilithium_verify_evmfriendly` | 13495423 | 128 | 128 | - | - |  |
+| ecdsa | `ecdsa::ecdsa_erc1271_isValidSignature_foundry` | 21413 | 128 | 128 | - | - |  |
+| ecdsa | `ecdsa::ecdsa_verify_bytes65_foundry` | 24032 | 128 | 128 | - | - |  |
+| ecdsa | `ecdsa::ecdsa_verify_ecrecover_foundry` | 21126 | 128 | 128 | - | - |  |
+| ecdsa | `ecdsa::l1_envelope_assumption` | 0 | 128 | 128 | - | - |  |
+| entropy | `entropy::randao_hash_based_assumption` | 0 | 128 | 128 | - | - |  |
+| falcon | `falcon::falcon_getUserOpHash_via_entry` | 218333 | 256 | 256 | - | - |  |
+| falcon | `falcon::falcon_handleOps_userOp_e2e` | 10966076 | 128 | 256 | - | ecdsa::l1_envelope_assumption | Capped by L1 ECDSA envelope assumption (PQ not enshrined end-to-end). |
+| falcon | `falcon::falcon_verifySignature_log` | 10336055 | 256 | 256 | - | - |  |
+| falcon | `falcon::qa_validateUserOp_userop_log` | 10589132 | 256 | 256 | - | - |  |
+| mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho0_log` | 1499354 | 128 | 192 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json | - |  |
+| mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho1_log` | 1499354 | 128 | 192 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json | - |  |
+| mldsa65 | `mldsa65::verify_poc_foundry` | 68901612 | 128 | 192 | - | - |  |
+| p256 | `p256::ethdilithium_p256verify_log` | 22124 | 128 | 128 | - | - |  |
+| randao | `randao::l1_randao_mix_surface` | 5820 | 32 | 128 | - | - |  |
+| randao | `randao::mix_for_sample_selection_surface` | 13081 | 32 | 128 | - | - |  |
+| vrf_pq | `vrf_pq::pq_vrf_target_assumption` | 0 | 192 | 192 | - | - |  |
 
 Notes:
 - `effective_security_bits` is conservative: it never exceeds the weakest dependency in `depends_on`.
 - `H_min` surfaces are currently placeholders until the threat model is finalized (gas is measured).
 - `Target (bits)` is display-only: if a category is unknown, target falls back to `max(own_bits, effective_bits)`.
+- `Verified` is ✅ only when the dataset row includes an `onchain_proof` bundle.
 
 <!-- MLDSA65_VENDOR_BEGIN -->
 ## ML-DSA-65 (vendor / pinned ref) — measured points
@@ -60,8 +61,8 @@ bash scripts/make_reports.sh
 | bench | gas_verify | denom | value | gas/bit | vendor commit | notes |
 |---|---:|---|---:|---:|---|---|
 | `verify_poc_foundry` | 68,901,612 | `lambda_eff` | 128.0 | 538293.84375 | `d9aabc14cf13` | sec192=192 gpb192=358,862.5625 | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle... |
-| `preA_compute_w_fromPackedA_ntt_rho0_log` | 1,499,354 | `lambda_eff` | 128.0 | 11713.703125 | `d9aabc14cf13` | sec192=192 gpb192=7,809.135417 | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle... |
-| `preA_compute_w_fromPackedA_ntt_rho1_log` | 1,499,354 | `lambda_eff` | 128.0 | 11713.703125 | `d9aabc14cf13` | sec192=192 gpb192=7,809.135417 | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle... |
+| `preA_compute_w_fromPackedA_ntt_rho0_log` | 1,499,354 | `lambda_eff` | 128.0 | 11713.703125 | `d9aabc14cf13` | sec192=192 gpb192=7,809.135417 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json ml-dsa-65-ethereum-verification ... |
+| `preA_compute_w_fromPackedA_ntt_rho1_log` | 1,499,354 | `lambda_eff` | 128.0 | 11713.703125 | `d9aabc14cf13` | sec192=192 gpb192=7,809.135417 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json ml-dsa-65-ethereum-verification ... |
 <!-- MLDSA65_VENDOR_END -->
 
 <!-- FALCON_VENDOR_BEGIN -->

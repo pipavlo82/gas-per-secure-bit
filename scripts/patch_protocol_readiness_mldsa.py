@@ -4,7 +4,7 @@
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 BEGIN = "<!-- MLDSA65_VENDOR_BEGIN -->"
 END   = "<!-- MLDSA65_VENDOR_END -->"
@@ -97,7 +97,7 @@ def _build_block(selected: Dict[str, Dict[str, Any]]) -> str:
     lines.append("")
 
     # Try to surface vector pack provenance (so it is searchable in the report).
-    vref = vid = vpack = None
+    vref = vpack = vid = None
     for b in WANT:
         r = selected.get(b)
         if not r:
@@ -143,6 +143,23 @@ def _build_block(selected: Dict[str, Dict[str, Any]]) -> str:
         commit = str(r.get("commit", ""))[:12]
         notes = str(r.get("notes", ""))
 
+        # ✅ On-chain proof marker (if present)
+        op = r.get("onchain_proof") or {}
+        if isinstance(op, dict) and op:
+            txs = op.get("tx_hashes") or []
+            tx0 = txs[0] if txs else ""
+            contract = str(op.get("contract", ""))
+            artifact = str(op.get("artifact_path", ""))
+            proof_bits: List[str] = []
+            if tx0:
+                proof_bits.append(f"tx={tx0[:10]}…")
+            if contract:
+                proof_bits.append(f"ctr={contract[:10]}…")
+            if artifact:
+                proof_bits.append(f"artifact={artifact.split('/')[-1]}")
+            proof = " ".join(proof_bits).strip()
+            notes = (f"✅ {proof} " + notes).strip()
+
         # sec192 normalization hint for ML-DSA-65
         sec192 = 192
         gpb192 = ""
@@ -153,8 +170,12 @@ def _build_block(selected: Dict[str, Dict[str, Any]]) -> str:
 
         extra = f"sec192=192 gpb192={gpb192}" if gpb192 else "sec192=192"
 
+        # keep the notes short to avoid noisy diffs in reports
+        notes_short = notes[:90] + ("..." if len(notes) > 90 else "")
+
         lines.append(
-            f"| `{bench}` | {_fmt_int(gas)} | `{denom}` | {_fmt_float(val)} | {_fmt_float(gpb)} | `{commit}` | {extra} | {notes[:90]}{'...' if len(notes)>90 else ''} |"
+            f"| `{bench}` | {_fmt_int(gas)} | `{denom}` | {_fmt_float(val)} | {_fmt_float(gpb)} | "
+            f"`{commit}` | {extra} | {notes_short} |"
         )
 
     lines.append(END)

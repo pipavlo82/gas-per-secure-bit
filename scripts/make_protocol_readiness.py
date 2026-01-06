@@ -95,6 +95,35 @@ def _as_int(x: Any) -> Optional[int]:
         return None
 
 
+def _verified_cell(meta: Dict[str, Any]) -> str:
+    """
+    Return a short "verified" marker cell for the summary table.
+    - "✅ tx=... ctr=... artifact=..." if onchain_proof is present
+    - "-" otherwise
+    """
+    op = meta.get("onchain_proof")
+    if not (isinstance(op, dict) and op):
+        return "-"
+
+    parts: List[str] = ["✅"]
+
+    txs = op.get("tx_hashes") or []
+    if isinstance(txs, list) and txs:
+        tx0 = str(txs[0])
+        parts.append(f"tx={tx0[:10]}…")
+
+    ctr = op.get("contract")
+    if ctr:
+        ctrs = str(ctr)
+        parts.append(f"ctr={ctrs[:10]}…")
+
+    art = op.get("artifact_path")
+    if art:
+        parts.append(f"artifact={Path(str(art)).name}")
+
+    return " ".join(parts)
+
+
 @dataclass
 class Record:
     rid: str                      # canonical id, e.g. "falcon::falcon_handleOps_userOp_e2e"
@@ -358,8 +387,8 @@ def main() -> None:
     lines.append("python3 scripts/make_protocol_readiness.py")
     lines.append("```")
     lines.append("")
-    lines.append("| Category | Surface | Gas | effective_security_bits | Target (bits) | Capped by | Blocker |")
-    lines.append("|---|---|---:|---:|---:|---|---|")
+    lines.append("| Category | Surface | Gas | effective_security_bits | Target (bits) | Verified | Capped by | Blocker |")
+    lines.append("|---|---|---:|---:|---:|---|---|---|")
 
     for _, r in rows:
         eff = eff_map.get(r.rid, 0)
@@ -374,8 +403,10 @@ def main() -> None:
         cap_dep = find_cap_reason(r, eff_map, records)
         blocker = blocker_text(cap_dep) if cap_dep else ""
 
+        verified = _verified_cell(r.meta)
+
         lines.append(
-            f"| {r.category} | `{r.rid}` | {fmt_int(r.gas)} | {eff} | {target} | {cap_dep or '-'} | {blocker} |"
+            f"| {r.category} | `{r.rid}` | {fmt_int(r.gas)} | {eff} | {target} | {verified} | {cap_dep or '-'} | {blocker} |"
         )
 
     lines.append("")
@@ -383,6 +414,7 @@ def main() -> None:
     lines.append("- `effective_security_bits` is conservative: it never exceeds the weakest dependency in `depends_on`.")
     lines.append("- `H_min` surfaces are currently placeholders until the threat model is finalized (gas is measured).")
     lines.append("- `Target (bits)` is display-only: if a category is unknown, target falls back to `max(own_bits, effective_bits)`.")
+    lines.append("- `Verified` is ✅ only when the dataset row includes an `onchain_proof` bundle.")
     lines.append("")
 
     OUT_MD.write_text("\n".join(lines), encoding="utf-8")
@@ -391,4 +423,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
