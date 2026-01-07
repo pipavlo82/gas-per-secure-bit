@@ -52,6 +52,9 @@ To avoid mixing benchmark scopes, the dataset supports a surface taxonomy and an
 - **Weakest-link report (generated):** `reports/weakest_link_report.md`
 - **One-page status summary:** `reports/summary.md`
 
+We separate **app-facing** verifier surfaces (ERC-1271 / ERC-7913 / AA) from **protocol-facing** surfaces
+(e.g., a precompile-style verifier boundary, tagged as `sig::protocol`) to avoid mixing scopes.
+
 For any pipeline record with `depends_on[]`:
 
 ```
