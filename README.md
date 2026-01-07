@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**Benchmarking post-quantum signatures and verifiable randomness on EVM by gas cost per cryptographically meaningful bit.**
+**Benchmarking post-quantum signatures and protocol-level randomness surfaces on EVM by gas cost per cryptographically meaningful bit.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Built with Foundry](https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg)](https://getfoundry.sh/)
@@ -71,7 +71,8 @@ Some vendor harnesses expose gas via Foundry snapshot lines `(gas: N)`, while ot
 ---
 
 This repository is an experimental benchmarking lab spun out of  
-[`ml-dsa-65-ethereum-verification`](https://github.com/pipavlo82/ml-dsa-65-ethereum-verification).
+[`ml-dsa-65-ethereum-verification`](https://github.com/pipavlo82/ml-dsa-65-ethereum-verification),
+which provides the **on-chain verification artifacts** (Solidity implementation + gas harnesses) used as a primary vendor source.
 
 It exists to answer one practical question for Ethereum engineers:
 
@@ -294,6 +295,9 @@ See also:
 ## Current Dataset (EVM/L1) — Gas Snapshots
 
 **Source of truth:** `data/results.jsonl` (CSV is deterministically rebuilt by `scripts/parse_bench.py --regen` via `./scripts/make_reports.sh`).
+
+> **Normalization note:** For ML-DSA-65 we report `security_equiv_bits=192` (FIPS-204 Category 3 convention) in tables.
+> Some raw vendor ingests may also record `lambda_eff=128` as a budgeting denominator; those are clearly labeled as baseline and are not used for "secure-bit" comparisons.
 
 ### Signature & AA Benchmarks
 
@@ -534,6 +538,8 @@ gas_compute_w_fromPacked_A_ntt(rho1) 1499354
 
 This provides a **wiring-consistency proof**: the same `packedA_ntt` construction used in the microbench
 is executed on-chain and produces identical rho0/rho1 measurements, with broadcast artifacts saved for audit.
+
+**Note:** the on-chain runner script lives in the ML-DSA vendor repo and is executed via the pinned vendor runner; this repo records the resulting broadcast artifact for reproducibility.
 
 See also:
 - Broadcast artifact: `vendors/ml-dsa-65-ethereum-verification/broadcast/RunPreAOnChain.s.sol/31337/run-latest.json`
