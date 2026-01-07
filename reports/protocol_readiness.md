@@ -24,12 +24,14 @@ python3 scripts/make_protocol_readiness.py
 | falcon | `falcon::falcon_handleOps_userOp_e2e` | 10966076 | 128 | 256 | - | ecdsa::l1_envelope_assumption | Capped by L1 ECDSA envelope assumption (PQ not enshrined end-to-end). |
 | falcon | `falcon::falcon_verifySignature_log` | 10336055 | 256 | 256 | - | - |  |
 | falcon | `falcon::qa_validateUserOp_userop_log` | 10589132 | 256 | 256 | - | - |  |
+| falcon1024 | `falcon1024::qa_handleOps_userop_foundry_weakest_link_sigproto` | 10966076 | 256 | 256 | - | - |  |
 | mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho0_log` | 1499354 | 128 | 192 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json | - |  |
 | mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho1_log` | 1499354 | 128 | 192 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json | - |  |
 | mldsa65 | `mldsa65::verify_poc_foundry` | 68901612 | 128 | 192 | - | - |  |
 | p256 | `p256::ethdilithium_p256verify_log` | 22124 | 128 | 128 | - | - |  |
 | randao | `randao::l1_randao_mix_surface` | 5820 | 32 | 128 | - | - |  |
 | randao | `randao::mix_for_sample_selection_surface` | 13081 | 32 | 128 | - | - |  |
+| sigproto | `sigproto::eip7932_precompile_assumption` | 0 | 256 | 256 | - | - |  |
 | vrf_pq | `vrf_pq::pq_vrf_target_assumption` | 0 | 192 | 192 | - | - |  |
 
 Notes:

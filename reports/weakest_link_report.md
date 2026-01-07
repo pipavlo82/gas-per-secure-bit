@@ -10,5 +10,13 @@ This report is generated from `data/results.jsonl`.
 
 ## Findings
 
-No records with `security_model=weakest_link` or non-empty `depends_on` were found.
-Add `depends_on` to AA/UserOp benchmarks to compute end-to-end effective security.
+| Record | Chain | Declared bits | Depends on | Effective bits |
+|---|---|---:|---|---:|
+| `falcon1024::qa_handleOps_userop_foundry_weakest_link_sigproto` | EVM/L1 | 256.0 | sigproto::eip7932_precompile_assumption | 256.0 |
+
+## Notes
+
+- Add explicit `depends_on` edges to reflect real execution paths (e.g., AA user op → L1 envelope).
+- Keep baseline envelope assumptions as separate records (e.g., `ecdsa::l1_envelope_assumption`).
+- Entropy/attestation surfaces should use `security_metric_type=H_min` with an explicit threat model in `notes`.
+
