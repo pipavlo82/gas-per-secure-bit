@@ -17,6 +17,11 @@ Use `baseline::<name>` for conceptual baselines.
   - Protocol-level L1 transaction envelope signature assumption (classical ECDSA).
   - Declared security: 128 bits (classical)
 
+- `baseline::sigproto_eip7932_assumption`
+  - Protocol-facing signature verification surface (precompile / enshrined interface candidate).
+  - Represents the assumption that a protocol-level signature verification interface (e.g., EIP-7932-style precompile) is available and trusted.
+  - Security: inherits from the underlying cryptographic primitive (e.g., ML-DSA-65 → 192 bits)
+
 ---
 
 ## Canonical Graphs
@@ -59,6 +64,21 @@ Represents pure on-chain PQ verification primitive cost, without protocol envelo
 
 ---
 
+### G4 — Protocol-facing signature verification (precompile path)
+
+Represents a protocol-level signature verification path via a precompile / enshrined interface (e.g., EIP-7932).
+
+**Dependencies:**
+- `mldsa65::sigproto_verify` (hypothetical protocol-facing verification)
+- `baseline::sigproto_eip7932_assumption` (protocol interface trust assumption)
+
+**Weakest-link effective security:**
+- `min( security(mldsa65::sigproto_verify), security(baseline::sigproto_eip7932_assumption) )`
+
+**Note:** This graph isolates the protocol-facing surface from app-facing surfaces (ERC-7913).
+
+---
+
 **Important:** Gas is taken from the measured S3/S2 benchmark node; baseline nodes contribute only to effective security via weakest-link.
 
 ---
@@ -70,7 +90,7 @@ Represents pure on-chain PQ verification primitive cost, without protocol envelo
 
 **Taxonomy:**
 - **S0–S3** = surface taxonomy (benchmark scopes)
-- **G1–G3** = canonical graphs (execution paths over surfaces + baselines)
+- **G1–G4** = canonical graphs (execution paths over surfaces + baselines)
 
 ---
 
@@ -117,8 +137,10 @@ graph TD
   S2["S2: AA validation (validateUserOp)"]
   S1["S1: Contract wallet interface (ERC-1271 isValidSignature)"]
   S0["S0: Pure signature verify (verifySignature/verify only)"]
+  S0p["S0p: Protocol-facing signature interface (sig::protocol)"]
 
   ENV["L1 envelope signature (ECDSA today) — baseline node"]
+  SIGPROTO["Protocol signature interface assumption (EIP-7932 candidate) — baseline node"]
   RANDAO["Entropy surface: RANDAO mix (H_min) — vNext baseline node"]
   RELAY["Envelope surface: relay/builder attestation (H_min) — vNext baseline node"]
 
@@ -127,6 +149,9 @@ graph TD
   S1 --> S0
 
   S3 --> ENV
+
+  %% Protocol-facing path
+  S0p --> SIGPROTO
 
   %% vNext envelope/entropy surfaces (optional dependencies)
   S3 -.-> RANDAO
@@ -158,8 +183,10 @@ flowchart TD
   S2[S2: AA validation - validateUserOp]
   S1[S1: Contract wallet surface - ERC-1271 isValidSignature]
   S0[S0: Pure signature verify - verifySignature / verify]
+  S0p[S0p: Protocol-facing signature interface - sig::protocol]
 
   ENV[L1 envelope assumption - ECDSA today]
+  SIGPROTO[Protocol signature interface - EIP-7932 candidate]
   RANDAO[L1 entropy surface: RANDAO mix - H_min - vNext]
   RELAY[Relay/ordering attestation surface - H_min - vNext]
 
@@ -169,12 +196,17 @@ flowchart TD
 
   S3 --> ENV
   
+  %% Protocol-facing path
+  S0p --> SIGPROTO
+  
   %% vNext dependencies (optional until threat model finalized)
   S3 -.-> RANDAO
   S3 -.-> RELAY
 
   style S3 fill:#f9f,stroke:#333,stroke-width:2px
   style ENV fill:#faa,stroke:#333,stroke-width:2px
+  style S0p fill:#afa,stroke:#333,stroke-width:2px
+  style SIGPROTO fill:#faa,stroke:#333,stroke-width:2px
   style RANDAO fill:#aaf,stroke:#333,stroke-width:2px
   style RELAY fill:#aaf,stroke:#333,stroke-width:2px
 ```
@@ -183,3 +215,16 @@ flowchart TD
 **Weakest-link model:** `effective_security_bits = min(security_bits over deps)`.
 
 Dotted lines indicate vNext dependencies that are not yet mandatory (threat model not finalized).
+
+---
+
+## Protocol-facing vs App-facing paths
+
+- **App-facing path:** S3 → S2 → S1 → S0 (ERC-7913 adapters, wallet integration)
+- **Protocol-facing path:** S0p → SIGPROTO (precompile / enshrined interface candidate)
+
+**Key difference:**
+- App-facing surfaces are bounded by L1 envelope (baseline::l1_envelope_ecdsa_assumption)
+- Protocol-facing surfaces depend on the protocol signature interface assumption (baseline::sigproto_eip7932_assumption)
+
+**Goal:** Keep ABI shapes compatible across both paths and use shared KAT schemas to avoid divergent benchmarking conventions.
