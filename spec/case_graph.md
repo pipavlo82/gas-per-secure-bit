@@ -13,14 +13,27 @@ Use `baseline::<name>` for conceptual baselines.
 
 ## Baseline Nodes (recommended)
 
+### Protocol envelope assumptions
+
 - `baseline::l1_envelope_ecdsa_assumption`
   - Protocol-level L1 transaction envelope signature assumption (classical ECDSA).
   - Declared security: 128 bits (classical)
+  - **Meaning:** The L1 envelope signature mechanism (currently ECDSA) bounds end-to-end security regardless of inner wallet auth.
+
+### Signature verification surface assumptions
 
 - `baseline::sigproto_eip7932_assumption`
   - Protocol-facing signature verification surface (precompile / enshrined interface candidate).
   - Represents the assumption that a protocol-level signature verification interface (e.g., EIP-7932-style precompile) is available and trusted.
   - Security: inherits from the underlying cryptographic primitive (e.g., ML-DSA-65 → 192 bits)
+  - **Meaning:** "Protocol interface exists and is standardized" — not a gas measurement, but a trust boundary assumption.
+
+- `baseline::app_erc7913_surface_assumption`
+  - App-facing signature verification surface (ERC-7913 adapter boundary).
+  - Represents the assumption that ERC-7913-style adapters provide a standardized app-layer verification interface.
+  - Security: inherits from the underlying primitive (scheme-dependent)
+  - **Meaning:** "Standardized app-facing interface boundary exists" — this is an interface assumption node, not a measured benchmark.
+  - **Note:** gas=0 (conceptual node); actual gas measurements live in scheme-specific ERC-7913 adapter benches.
 
 ---
 
@@ -141,6 +154,7 @@ graph TD
 
   ENV["L1 envelope signature (ECDSA today) — baseline node"]
   SIGPROTO["Protocol signature interface assumption (EIP-7932 candidate) — baseline node"]
+  APP7913["App-facing surface assumption (ERC-7913) — baseline node"]
   RANDAO["Entropy surface: RANDAO mix (H_min) — vNext baseline node"]
   RELAY["Envelope surface: relay/builder attestation (H_min) — vNext baseline node"]
 
@@ -149,6 +163,9 @@ graph TD
   S1 --> S0
 
   S3 --> ENV
+
+  %% App-facing path (ERC-7913 adapter)
+  S1 --> APP7913
 
   %% Protocol-facing path
   S0p --> SIGPROTO
@@ -187,6 +204,7 @@ flowchart TD
 
   ENV[L1 envelope assumption - ECDSA today]
   SIGPROTO[Protocol signature interface - EIP-7932 candidate]
+  APP7913[App-facing surface - ERC-7913 assumption]
   RANDAO[L1 entropy surface: RANDAO mix - H_min - vNext]
   RELAY[Relay/ordering attestation surface - H_min - vNext]
 
@@ -195,6 +213,9 @@ flowchart TD
   S1 --> S0
 
   S3 --> ENV
+  
+  %% App-facing path (ERC-7913 adapter assumption)
+  S1 --> APP7913
   
   %% Protocol-facing path
   S0p --> SIGPROTO
@@ -207,6 +228,7 @@ flowchart TD
   style ENV fill:#faa,stroke:#333,stroke-width:2px
   style S0p fill:#afa,stroke:#333,stroke-width:2px
   style SIGPROTO fill:#faa,stroke:#333,stroke-width:2px
+  style APP7913 fill:#ffa,stroke:#333,stroke-width:2px
   style RANDAO fill:#aaf,stroke:#333,stroke-width:2px
   style RELAY fill:#aaf,stroke:#333,stroke-width:2px
 ```
@@ -228,3 +250,59 @@ Dotted lines indicate vNext dependencies that are not yet mandatory (threat mode
 - Protocol-facing surfaces depend on the protocol signature interface assumption (baseline::sigproto_eip7932_assumption)
 
 **Goal:** Keep ABI shapes compatible across both paths and use shared KAT schemas to avoid divergent benchmarking conventions.
+
+---
+
+## Weakest-link mapping rules
+
+### App-facing path dependency chain
+
+```
+pq::verify (raw verification primitive)
+  ↓
+sig::erc7913 (ERC-7913 adapter, app-facing surface)
+  ↓
+aa::validateUserOp (AA validation boundary)
+  ↓
+aa::handleOps (full AA pipeline)
+  ↓
+baseline::l1_envelope_ecdsa_assumption (envelope dominance)
+```
+
+**Weakest-link:** `effective_security_bits = min(all nodes in chain)`
+
+**Envelope dominance:** If `baseline::l1_envelope_ecdsa_assumption` (128 bits classical) is in the dependency chain, the effective security is capped at 128 bits until L1 becomes PQ-ready.
+
+### Protocol-facing path dependency chain (vNext)
+
+```
+pq::verify (raw verification primitive)
+  ↓
+sig::protocol (protocol-facing interface, e.g., EIP-7932 precompile)
+  ↓
+baseline::sigproto_eip7932_assumption (protocol interface trust assumption)
+```
+
+**Weakest-link:** `effective_security_bits = min(pq::verify security, sig::protocol interface assumption)`
+
+**Key insight:** Protocol-facing path bypasses AA/ERC-7913 layers but depends on protocol interface trust assumptions.
+
+---
+
+## Lookup rule for weakest-link computation
+
+When computing `effective_security_bits` for a pipeline with `depends_on[]`:
+
+1. **For dataset records** (`scheme::bench_name`):
+   - Look up `security_metric_value` from `data/results.jsonl`
+   - Use `security_metric_type` to determine the metric (security_equiv_bits, lambda_eff, H_min)
+
+2. **For baseline nodes** (`baseline::<name>`):
+   - Use declared constant value from this document
+   - `baseline::l1_envelope_ecdsa_assumption` → 128 bits (classical)
+   - `baseline::sigproto_eip7932_assumption` → inherits from underlying primitive
+
+3. **Compute minimum:**
+   - `effective_security_bits = min(security_bits(dep_i))` across all dependencies
+
+---
