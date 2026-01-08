@@ -138,3 +138,4 @@ where `security_bits(dep)` is derived from:
 - Use surface classes to prevent invalid comparisons (e.g., `pq::verify` vs `aa::handleOps`).
 - Placeholder records (e.g., gas=0 or provisional denominators) must state that explicitly in `notes`.
 - Canonical dependency graphs live in `spec/case_graph.md`.
+- **App-facing vs protocol-facing:** `sig::erc7913` and `sig::erc1271` are app-facing surfaces; `sig::protocol` is the protocol-facing surface (precompile / enshrined interface candidate).
