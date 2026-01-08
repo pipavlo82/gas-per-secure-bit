@@ -55,6 +55,8 @@ To avoid mixing benchmark scopes, the dataset supports a surface taxonomy and an
 We separate **app-facing** verifier surfaces (ERC-1271 / ERC-7913 / AA) from **protocol-facing** surfaces
 (e.g., a precompile-style verifier boundary, tagged as `sig::protocol`) to avoid mixing scopes.
 
+**Surface taxonomy:** ERC-7913 adapters represent the app-facing verification boundary (wallets, dapps, AA integration), while `sig::protocol` (e.g., EIP-7932 candidate) represents a protocol-facing interface (precompile / enshrined verifier boundary).
+
 For any pipeline record with `depends_on[]`:
 
 ```
