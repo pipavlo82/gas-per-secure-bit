@@ -35,3 +35,6 @@ vendor/
 
 # Python venv
 .venv/
+
+# local backups
+/data/*.bak*
