@@ -25,6 +25,8 @@ python3 scripts/make_protocol_readiness.py
 | falcon | `falcon::falcon_verifySignature_log` | 10336055 | 256 | 256 | - | - |  |
 | falcon | `falcon::qa_validateUserOp_userop_log` | 10589132 | 256 | 256 | - | - |  |
 | falcon1024 | `falcon1024::qa_handleOps_userop_foundry_weakest_link_sigproto` | 10966076 | 256 | 256 | - | - |  |
+| mldsa65 | `mldsa65::mldsa65_erc1271_packedA_wallet_callctx` | 95392 | 128 | 192 | - | - |  |
+| mldsa65 | `mldsa65::mldsa65_erc7913_verifyWithPackedA_callctx` | 39772 | 128 | 192 | - | - |  |
 | mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho0_log` | 1499354 | 128 | 192 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json | - |  |
 | mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho1_log` | 1499354 | 128 | 192 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json | - |  |
 | mldsa65 | `mldsa65::verify_poc_foundry` | 68901612 | 128 | 192 | - | - |  |
