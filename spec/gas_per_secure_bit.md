@@ -44,3 +44,12 @@ Each benchmark record MUST include:
 - security_metric_value
 - gas_per_secure_bit
 - notes (hash/xof profile, implementation refs, commit hash, etc.)
+### Optional metadata: key storage realism
+
+Bench records MAY include `key_storage_assumption` to make off-chain key handling explicit. This is metadata (orthogonal to on-chain gas), intended to avoid mixing threat models when comparing results.
+
+Allowed values (v0):
+- `tpm_resident_signing` — private key never leaves TPM/SE/HSM; signing happens inside hardware (where supported).
+- `tpm_sealed_ephemeral_use` — key is sealed/encrypted at rest under a TPM/SE/HSM-derived KEK; plaintext exists only ephemerally in process memory during signing with explicit zeroization.
+- `software_exportable` — key material is software-managed / exportable; no hardware-backed isolation assumption.
+- `unknown` — not specified.

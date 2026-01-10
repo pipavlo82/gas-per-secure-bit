@@ -46,6 +46,13 @@ Each dataset row should include:
 - **`notes`:** What exactly is measured; what is included/excluded
 
 ---
+### Optional / recommended annotations (to avoid mixing threat models)
+
+- **`key_storage_assumption`:** one of:
+  - `tpm_resident_signing`
+  - `tpm_sealed_ephemeral_use`
+  - `software_exportable`
+  - `unknown` (default if not specified)
 
 ## Security Reporting for Signatures (Explicit Assumptions)
 
