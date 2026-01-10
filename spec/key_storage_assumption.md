@@ -34,7 +34,7 @@ Optional companion fields:
 
 **Meaning:** The private key is usable and/or storable in software such that it is *exportable in plaintext at rest* (or equivalently: can be recovered from software memory/storage without requiring a hardware trust boundary).
 
-This includes seed phrases / keyfiles / secrets fully recoverable under host compromise.
+This includes seed phrases / keyfiles / secrets recoverable under host compromise (e.g., malware or memory scraping).
 
 **Typical examples:**
 - Standard software wallets / keyfiles / seeds in app storage
@@ -58,13 +58,13 @@ This is often the best achievable posture when the hardware does **not** nativel
 - Signing uses short-lived plaintext in memory + explicit wiping
 - Often PCR-bound (TPM) or enclave-policy-bound (TEE), but details belong in `key_storage_notes`
 
-**Threat model note:** Not equivalent to true hardware-resident signing, but materially stronger than fully software-managed keys for offline theft/exfiltration. Primarily protects against offline theft/exfiltration; does not prevent key capture under live host compromise during signing.
+**Threat model note:** Not equivalent to true hardware-resident signing, but materially stronger than fully software-managed keys for offline theft/exfiltration. Primarily protects against offline theft/exfiltration; it does not prevent key capture under live host compromise during signing.
 
 ---
 
 ### 3) `tpm_resident_signing`
 
-**Meaning:** The private key is generated/stored/used **entirely within a hardware trust boundary** (TPM/HSM/TEE where the signing algorithm is supported natively).  
+**Meaning:** The private key is generated/stored/used **entirely within a hardware trust boundary** (e.g., HSM/TEE/TPM). This assumes the hardware can perform the required signing operation natively.  
 Signing happens within the hardware boundary; plaintext private key material is never exposed to host process memory.
 
 **Typical examples:**
