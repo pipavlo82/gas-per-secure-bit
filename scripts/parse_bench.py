@@ -283,6 +283,7 @@ def regen_csv_from_jsonl(jsonl_path: Path, csv_path: Path) -> Tuple[int, int]:
         "hash_profile",
         "security_model",
         "surface_class",
+        "key_storage_assumption",
         "notes",
         "depends_on",
         "provenance",
@@ -306,6 +307,9 @@ def regen_csv_from_jsonl(jsonl_path: Path, csv_path: Path) -> Tuple[int, int]:
                 row_out["depends_on"] = ""
 
             row_out["provenance"] = _normalize_provenance_for_csv(r.get("provenance"))
+
+            if "key_storage_assumption" not in r:
+                row_out["key_storage_assumption"] = "unknown"
 
             w.writerow(row_out)
 
