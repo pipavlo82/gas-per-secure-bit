@@ -32,6 +32,7 @@
 - [Security Normalization (Explicit Assumptions)](#security-normalization-explicit-assumptions)
 - [Quick Start](#quick-start)
 - [PreA Convention (ML-DSA-65)](#prea-convention-ml-dsa-65)
+- [Key storage assumption (annotation axis)](#key-storage-assumption-annotation-axis)
 - [Vendor benchmarks (pinned refs)](#vendor-benchmarks-pinned-refs)
 - [Benchmarks Included](#benchmarks-included)
 - [Related Work / References](#related-work--references)
@@ -415,16 +416,21 @@ For protocol surfaces:
   This is intentional: it stays parseable by standard CSV tooling + `json.loads()`.
 
 ---
-###  Key storage assumption (annotation axis)
-Benchmarks measure on-chain verification cost (gas), which is independent of how private keys are stored off-chain. However, different key storage models affect real-world threat models (exfiltration risk, operational constraints).
-This repo treats key storage as an optional annotation axis via key_storage_assumption:
+### Key storage assumption (annotation axis)
 
-software_exportable — keys recoverable from software (seed phrases, keyfiles)
-tpm_sealed_ephemeral_use — hardware-sealed at rest, ephemeral decrypt for signing
-tpm_resident_signing — signing happens entirely within hardware boundary
+Benchmarks measure **on-chain verification cost** (gas), which is independent of how private keys are stored off-chain.  
+However, key storage models materially affect the *real-world* threat model (e.g., exfiltration risk, offline theft, and operational constraints).  
+This repo therefore treats key storage as an **optional annotation axis** via `key_storage_assumption`.
 
-Spec: spec/key_storage_assumption.md
-Default: Records without this field are assumed software_exportable.
+Allowed values (v0):
+
+- `software_exportable` — keys recoverable from software (seed phrases, keyfiles, secrets in host storage/memory).
+- `tpm_sealed_ephemeral_use` — key encrypted at rest under a TPM/TEE/HSM-sealed wrapping key; decrypted ephemerally in-process for signing; explicit zeroization.
+- `tpm_resident_signing` — signing occurs entirely within a hardware boundary; plaintext private key material is never exposed to the host process.
+
+Spec: `spec/key_storage_assumption.md`  
+Default: records without `key_storage_assumption` are assumed to be `software_exportable`.
+
 ## Security Normalization (Explicit Assumptions)
 
 This repo separates:
