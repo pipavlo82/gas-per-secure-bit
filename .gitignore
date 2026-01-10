@@ -38,3 +38,6 @@ vendor/
 
 # local backups
 /data/*.bak*
+
+# local backups
+README.md.bak.*
