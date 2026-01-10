@@ -519,8 +519,8 @@ For benchmarks using precomputed `A_ntt` matrices, this repo follows a canonical
 on-chain execution proofs for reproducibility.
 
 ### Documentation
-- **PreA (packedA_ntt) convention:** [docs/preA_packedA_ntt.md](docs/preA_packedA_ntt.md)
-- **On-chain proof runner:** `script/RunPreAOnChain.s.sol`
+- **PreA (packedA_ntt) convention:** [vendors/ml-dsa-65-ethereum-verification/docs/preA_packedA_ntt.md](vendors/ml-dsa-65-ethereum-verification/docs/preA_packedA_ntt.md)
+- **On-chain proof runner:** `vendors/ml-dsa-65-ethereum-verification/script/RunPreAOnChain.s.sol`
 
 ### How to reproduce (local anvil)
 
@@ -529,7 +529,7 @@ on-chain execution proofs for reproducibility.
 anvil
 
 # Terminal 2: Run on-chain proof script
-forge script script/RunPreAOnChain.s.sol:RunPreAOnChain \
+forge script vendors/ml-dsa-65-ethereum-verification/script/RunPreAOnChain.s.sol:RunPreAOnChain \
   --rpc-url http://127.0.0.1:8545 \
   --private-key $PK \
   --broadcast -vv
