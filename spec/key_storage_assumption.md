@@ -18,9 +18,9 @@ This file defines the canonical vocabulary used in dataset rows via `key_storage
 
 Allowed values (v0):
 
-1) `software_exportable`  
-2) `tpm_sealed_ephemeral_use`  
-3) `tpm_resident_signing`
+1. `software_exportable`  
+2. `tpm_sealed_ephemeral_use`  
+3. `tpm_resident_signing`
 
 Optional companion fields:
 - `key_storage_notes` (free text)
@@ -34,6 +34,8 @@ Optional companion fields:
 
 **Meaning:** The private key is usable and/or storable in software such that it is *exportable in plaintext at rest* (or equivalently: can be recovered from software memory/storage without requiring a hardware trust boundary).
 
+This includes seed phrases / keyfiles / secrets fully recoverable under host compromise.
+
 **Typical examples:**
 - Standard software wallets / keyfiles / seeds in app storage
 - Keys derived and held entirely in process memory
@@ -45,7 +47,7 @@ Optional companion fields:
 ### 2) `tpm_sealed_ephemeral_use`
 
 **Meaning:** A hardware module (TPM/HSM/TEE) holds a **sealing key** (or wrapping key).  
-The wallet’s signing key exists **encrypted at rest**, protected by the hardware-sealed key.  
+The wallet's signing key exists **encrypted at rest**, protected by the hardware-sealed key.  
 For signing, the signing key is **decrypted ephemerally in process memory**, used, then **explicitly zeroized**.
 
 This is often the best achievable posture when the hardware does **not** natively implement the signing algorithm/curve (e.g., secp256k1 in many TPMs), yet can still protect the key material at rest and reduce offline exfiltration risk.
@@ -56,13 +58,13 @@ This is often the best achievable posture when the hardware does **not** nativel
 - Signing uses short-lived plaintext in memory + explicit wiping
 - Often PCR-bound (TPM) or enclave-policy-bound (TEE), but details belong in `key_storage_notes`
 
-**Threat model note:** Not equivalent to true hardware-resident signing, but materially stronger than fully software-managed keys for offline theft/exfiltration.
+**Threat model note:** Not equivalent to true hardware-resident signing, but materially stronger than fully software-managed keys for offline theft/exfiltration. Primarily protects against offline theft/exfiltration; does not prevent key capture under live host compromise during signing.
 
 ---
 
 ### 3) `tpm_resident_signing`
 
-**Meaning:** The private key is generated/stored/used **entirely inside hardware** (TPM/HSM/TEE).  
+**Meaning:** The private key is generated/stored/used **entirely within a hardware trust boundary** (TPM/HSM/TEE where the signing algorithm is supported natively).  
 Signing happens within the hardware boundary; plaintext private key material is never exposed to host process memory.
 
 **Typical examples:**
@@ -75,45 +77,63 @@ Signing happens within the hardware boundary; plaintext private key material is 
 
 ## Guidance for benchmark rows
 
-- Always set `key_storage_assumption` explicitly for benchmarks intended for cross-project comparison.
+- Always set `key_storage_assumption` explicitly for benchmarks intended for cross-project/cross-scheme comparison.
 - If unclear, default to **the weakest plausible assumption** (`software_exportable`) and explain in `key_storage_notes`.
 - Use `key_storage_ref` to point to an OSS reference implementation where possible (repo + commit/tag).
-- Keep the axis **descriptive**, not prescriptive: the benchmark should say what it assumes, not what everyone “must” do.
+- Keep the axis **descriptive**, not prescriptive: the benchmark should say what it assumes, not what everyone "must" do.
 
 ---
 
 ## Examples
 
 ### Example A (typical software wallet)
+
 ```json
 {
   "bench_name": "ecdsa_ecrecover_surface",
-  "surface": "sig::app",
+  "surface": "sig::erc7913",
   "key_storage_assumption": "software_exportable",
   "key_storage_notes": "Standard software key management (exportable secret)."
 }
-Example B (TPM-sealed at rest, ephemeral decrypt for signing)
-json
-Copy code
+```
+
+**Note:** `surface` tags are illustrative; align with canonical surface taxonomy in `spec/case_catalog.md`.
+
+### Example B (TPM-sealed at rest, ephemeral decrypt for signing)
+
+```json
 {
   "bench_name": "aa_validateUserOp_pq_verify",
-  "surface": "sig::aa::validateUserOp",
+  "surface": "aa::validateUserOp",
   "key_storage_assumption": "tpm_sealed_ephemeral_use",
   "key_storage_notes": "TPM-sealed wrapping key; signing key encrypted at rest; ephemeral in-process decrypt + explicit zeroization.",
   "key_storage_ref": "https://example.org/repo@<commit>"
 }
-Example C (true hardware-resident signing)
-json
-Copy code
+```
+
+### Example C (true hardware-resident signing)
+
+```json
 {
   "bench_name": "aa_validateUserOp_hybrid_verify",
-  "surface": "sig::aa::validateUserOp",
+  "surface": "aa::validateUserOp",
   "key_storage_assumption": "tpm_resident_signing",
   "key_storage_notes": "Hardware supports signing algorithm natively; host never sees plaintext key material."
 }
-Non-goals (v0)
-We do not attempt to standardize PCR policy, HSM vendor semantics, or enclave attestation formats here.
+```
 
-We do not claim one model is universally “better”; we only make assumptions explicit so gas comparisons remain honest.
+---
 
-Future versions may refine notes (TPM vs HSM vs TEE) without adding new required enum values.
+## Non-goals (v0)
+
+- We do not attempt to standardize PCR policy, HSM vendor semantics, or enclave attestation formats here.
+- We do not claim one model is universally "better"; we only make assumptions explicit so gas comparisons remain honest.
+- Future versions may refine notes (TPM vs HSM vs TEE) without adding new required enum values.
+
+---
+
+## Integration with gas-per-secure-bit dataset
+
+This annotation axis is **optional** in `data/results.jsonl`. Records without `key_storage_assumption` are assumed to have `software_exportable` as the implicit default.
+
+When comparing benchmarks across schemes or surfaces, reviewers should check if `key_storage_assumption` differs, as it affects operational security posture even though on-chain gas remains unchanged.
