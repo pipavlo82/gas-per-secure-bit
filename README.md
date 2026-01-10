@@ -414,21 +414,17 @@ For protocol surfaces:
 - In `data/results.csv`, `provenance` is stored as a **JSON string** (CSV-escaped quotes).
   This is intentional: it stays parseable by standard CSV tooling + `json.loads()`.
 
-### Key storage assumption (annotation axis)
-
-Benchmarks measure **on-chain verification cost** (gas), which is independent of how private keys are stored off-chain. However, different key storage models affect real-world threat models (exfiltration risk, operational constraints).
-
-This repo treats key storage as an **optional annotation axis** via `key_storage_assumption`:
-- `software_exportable` — keys recoverable from software (seed phrases, keyfiles)
-- `tpm_sealed_ephemeral_use` — hardware-sealed at rest, ephemeral decrypt for signing
-- `tpm_resident_signing` — signing happens entirely within hardware boundary
-
-**Spec:** [spec/key_storage_assumption.md](spec/key_storage_assumption.md)
-
-**Default:** Records without this field are assumed `software_exportable`.
-
 ---
+###  Key storage assumption (annotation axis)
+Benchmarks measure on-chain verification cost (gas), which is independent of how private keys are stored off-chain. However, different key storage models affect real-world threat models (exfiltration risk, operational constraints).
+This repo treats key storage as an optional annotation axis via key_storage_assumption:
 
+software_exportable — keys recoverable from software (seed phrases, keyfiles)
+tpm_sealed_ephemeral_use — hardware-sealed at rest, ephemeral decrypt for signing
+tpm_resident_signing — signing happens entirely within hardware boundary
+
+Spec: spec/key_storage_assumption.md
+Default: Records without this field are assumed software_exportable.
 ## Security Normalization (Explicit Assumptions)
 
 This repo separates:
@@ -532,8 +528,8 @@ For benchmarks using precomputed `A_ntt` matrices, this repo follows a canonical
 on-chain execution proofs for reproducibility.
 
 ### Documentation
-- **PreA (packedA_ntt) convention:** [docs/preA_packedA_ntt.md](docs/preA_packedA_ntt.md)
-- **On-chain proof runner:** `script/RunPreAOnChain.s.sol`
+- **PreA (packedA_ntt) convention:** Vendor doc (pinned): https://github.com/pipavlo82/ml-dsa-65-ethereum-verification/blob/6d58ce9e64b4c499fc52395e01e2bfbcd967d441/docs/preA_packedA_ntt.md
+- **On-chain proof runner:** Vendor script (pinned): https://github.com/pipavlo82/ml-dsa-65-ethereum-verification/blob/6d58ce9e64b4c499fc52395e01e2bfbcd967d441/script/RunPreAOnChain.s.sol
 
 ### How to reproduce (local anvil)
 
@@ -542,7 +538,7 @@ on-chain execution proofs for reproducibility.
 anvil
 
 # Terminal 2: Run on-chain proof script
-forge script script/RunPreAOnChain.s.sol:RunPreAOnChain \
+forge script https://github.com/pipavlo82/ml-dsa-65-ethereum-verification/blob/6d58ce9e64b4c499fc52395e01e2bfbcd967d441/script/RunPreAOnChain.s.sol:RunPreAOnChain \
   --rpc-url http://127.0.0.1:8545 \
   --private-key $PK \
   --broadcast -vv
@@ -560,7 +556,7 @@ is executed on-chain and produces identical rho0/rho1 measurements, with broadca
 **Note:** the on-chain runner script lives in the ML-DSA vendor repo and is executed via the pinned vendor runner; this repo records the resulting broadcast artifact for reproducibility.
 
 See also:
-- Broadcast artifact: `vendors/ml-dsa-65-ethereum-verification/broadcast/RunPreAOnChain.s.sol/31337/run-latest.json`
+- Broadcast artifact (local only): `vendors/ml-dsa-65-ethereum-verification/broadcast/RunPreAOnChain.s.sol/31337/run-latest.json`
 - Deployed runner contract: `0xe7f1725e7734ce288f8367e1bb143e90bb3f0512` (anvil, chainId=31337)
 
 ---
@@ -710,4 +706,4 @@ folding / accumulation schemes).
 As a result, "gas per verify" alone is insufficient: engineering decisions require **surface-aware, security-normalized**
 benchmarks across L1/L2/AA verification surfaces and, eventually, PQ aggregation proof verification surfaces.
 
-See: [spec/pq_signature_aggregation_context.md](spec/pq_signature_aggregation_context.md)
+See: [spec/pq_signature_aggregation_context.md](spec/pq_signature_aggre
