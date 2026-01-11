@@ -419,17 +419,16 @@ For protocol surfaces:
 ### Key storage assumption (annotation axis)
 
 Benchmarks measure **on-chain verification cost** (gas), which is independent of how private keys are stored off-chain.  
-However, key storage models materially affect the *real-world* threat model (e.g., exfiltration risk, offline theft, and operational constraints).  
-This repo therefore treats key storage as an **optional annotation axis** via `key_storage_assumption`.
+However, different key-handling models materially change the real-world threat model (exfiltration risk, operational constraints).
 
-Allowed values (v0):
+This repo treats key storage as an **optional annotation axis** via `key_storage_assumption`:
 
-- `software_exportable` — keys recoverable from software (seed phrases, keyfiles, secrets in host storage/memory).
-- `tpm_sealed_ephemeral_use` — key encrypted at rest under a TPM/TEE/HSM-sealed wrapping key; decrypted ephemerally in-process for signing; explicit zeroization.
-- `tpm_resident_signing` — signing occurs entirely within a hardware boundary; plaintext private key material is never exposed to the host process.
+- `software_exportable` — keys recoverable from software (seed phrases, keyfiles); exportable in plaintext at rest
+- `tpm_sealed_ephemeral_use` — hardware-sealed at rest; ephemeral in-process decrypt for signing + explicit zeroization
+- `tpm_resident_signing` — signing happens entirely within the hardware trust boundary
 
-Spec: `spec/key_storage_assumption.md`  
-Default: records without `key_storage_assumption` are assumed to be `software_exportable`.
+Spec: [`spec/key_storage_assumption.md`](spec/key_storage_assumption.md)  
+Default: records missing this field are assumed `software_exportable`.
 
 ## Security Normalization (Explicit Assumptions)
 
