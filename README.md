@@ -14,7 +14,7 @@
 ## Table of Contents
 
 - [Methodology (surfaces + weakest-link)](#methodology-surfaces--weakest-link)
-- [PQ aggregation surfaces (BLS → PQ) — why this matters](#pq-aggregation-surfaces-bls--pq--why-this-matters)
+- [Explicit Message Lanes (wormholes)](#explicit-message-lanes-wormholes)- [PQ aggregation surfaces (BLS → PQ) — why this matters](#pq-aggregation-surfaces-bls--pq--why-this-matters)
 - [Core Metric](#core-metric)
 - [Public Review Entry Points](#public-review-entry-points)
 - [Why This Exists](#why-this-exists)
@@ -45,6 +45,15 @@
 ---
 
 ## Methodology (surfaces + weakest-link)
+
+## Explicit Message Lanes (wormholes)
+
+To prevent cross-surface replay-by-interpretation, this repo defines a minimal **lane envelope** (v0) that MUST be bound into digests: `lane_version`, `chainId`, `verifierBinding`, `surface_id`, `algo_id` (incl. hash/XOF lane), and `payload`.
+
+Spec: [`spec/explicit_lanes.md`](spec/explicit_lanes.md)
+
+---
+
 
 To avoid mixing benchmark scopes, the dataset supports a surface taxonomy and an optional dependency graph:
 
