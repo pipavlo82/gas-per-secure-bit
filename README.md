@@ -14,7 +14,8 @@
 ## Table of Contents
 
 - [Methodology (surfaces + weakest-link)](#methodology-surfaces--weakest-link)
-- [Explicit Message Lanes (wormholes)](#explicit-message-lanes-wormholes)- [PQ aggregation surfaces (BLS → PQ) — why this matters](#pq-aggregation-surfaces-bls--pq--why-this-matters)
+- [Explicit Message Lanes (wormholes)](#explicit-message-lanes-wormholes)
+- [PQ aggregation surfaces (BLS → PQ) — why this matters](#pq-aggregation-surfaces-bls--pq--why-this-matters)
 - [Core Metric](#core-metric)
 - [Public Review Entry Points](#public-review-entry-points)
 - [Why This Exists](#why-this-exists)
@@ -720,4 +721,4 @@ folding / accumulation schemes).
 As a result, "gas per verify" alone is insufficient: engineering decisions require **surface-aware, security-normalized**
 benchmarks across L1/L2/AA verification surfaces and, eventually, PQ aggregation proof verification surfaces.
 
-See: [spec/pq_signature_aggregation_context.md](spec/pq_signature_aggre
+See: [spec/pq_signature_aggregation_context.md](spec/pq_signature_aggregation_context.md)
