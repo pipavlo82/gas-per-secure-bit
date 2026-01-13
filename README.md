@@ -412,8 +412,11 @@ Columns:
 - `gas_per_secure_bit` — computed as `gas_verify / security_metric_value`
 - `hash_profile` — e.g., `keccak256` or `unknown`
 - `notes` — context + refs (runner, branch, extraction method)
-- `lane_assumption` (optional): `explicit_lane_v0` | `implicit_or_legacy`
+- `lane_assumption (optional): explicit | implicit_or_legacy
 - `wiring_lane` (optional): canonical lane id (e.g., `EVM_SIG_LANE_V0`)
+**Lane rule (signatures):** comparable signature benches SHOULD set `lane_assumption=explicit` and a concrete `wiring_lane`
+(e.g., `EVM_SIG_LANE_V0`). Records with different `wiring_lane` MUST NOT be compared as “the same surface” (avoid
+domain-separation wormholes). See `spec/explicit_lanes.md`.
 
 Additional (optional) fields used for composed pipelines:
 - `security_model` — e.g. `raw` or `weakest_link`
