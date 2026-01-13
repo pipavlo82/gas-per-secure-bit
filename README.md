@@ -2,7 +2,9 @@
 
 <div align="center">
 
-**Benchmarking post-quantum signatures and protocol-level randomness surfaces on EVM by gas cost per cryptographically meaningful bit.**
+**A reproducible measurement lab + methodology for post-quantum signatures on EVM (surfaces, provenance, explicit lanes), with a small v0 dataset.**
+
+**This is a lab, not a final leaderboard.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Built with Foundry](https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg)](https://getfoundry.sh/)
@@ -133,8 +135,9 @@ If you have 10 minutes:
 
 ## Why This Exists
 
-Most public comparisons stop at "gas per verify". That hides critical differences:
+This is a **measurement lab and methodology**, not a comprehensive benchmark suite.
 
+Most public comparisons stop at "gas per verify". That hides critical differences:
 - Different security levels (e.g., ECDSA ~128-bit convention vs ML-DSA-65 ~192 vs Falcon-1024 ~256)
 - Different verification surfaces (EOA vs ERC-1271 vs EIP-4337 pipeline)
 - Different protocol envelopes (e.g., L1 constraints can bound end-to-end security regardless of wallet scheme)
@@ -352,7 +355,11 @@ See also:
 
 ## What We Built
 
-A reproducible benchmark lab with:
+A reproducible measurement lab with:
+
+- **Methodology:** surfaces, provenance tracking, explicit lanes (v0)
+- **Small v0 dataset:** ML-DSA-65, Falcon-1024, ECDSA baselines, protocol surfaces
+- **Not a leaderboard:** This is infrastructure for reproducible comparison, not final rankings
 
 ### Dataset + Schema
 - Canonical dataset: `data/results.jsonl` (source of truth)
