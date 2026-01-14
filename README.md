@@ -49,15 +49,6 @@
 
 ## Methodology (surfaces + weakest-link)
 
-## Explicit Message Lanes (wormholes)
-
-To prevent cross-surface replay-by-interpretation, this repo defines a minimal **lane envelope** (v0) that MUST be bound into digests: `lane_version`, `chainId`, `verifierBinding`, `surface_id`, `algo_id` (incl. hash/XOF lane), and `payload`.
-
-Spec: [`spec/explicit_lanes.md`](spec/explicit_lanes.md)
-
----
-
-
 To avoid mixing benchmark scopes, the dataset supports a surface taxonomy and an optional dependency graph:
 
 - **Canonical execution surfaces (S0–S3):** `spec/case_graph.md`
@@ -80,23 +71,27 @@ Where `security_bits(x)` is derived from records with `security_metric_type ∈ 
 
 This repo may record multiple denominators for the same bench (e.g., `lambda_eff` for conservative crypto strength and `security_equiv_bits` for declared normalization) as separate records; comparisons must state which denominator is used.
 
-### Gas extraction modes (snapshot vs logs)
+---
 
-Some vendor harnesses expose gas via Foundry snapshot lines `(gas: N)`, while others print it via logs
-(e.g., `Gas used: N`). Runners support both via `scripts/extract_foundry_gas.py` using a per-run `needle`
-(e.g., `Gas used:`) so vendor repos do not need to be modified.
+## Explicit Message Lanes (wormholes)
+
+To prevent cross-surface replay-by-interpretation, this repo defines a minimal **lane envelope** (v0) that MUST be bound into digests: `lane_version`, `chainId`, `verifierBinding`, `surface_id`, `algo_id` (incl. hash/XOF lane), and `payload`.
+
+Spec: [`spec/explicit_lanes.md`](spec/explicit_lanes.md)
 
 ---
 
-This repository is an experimental benchmarking lab spun out of  
-[`ml-dsa-65-ethereum-verification`](https://github.com/pipavlo82/ml-dsa-65-ethereum-verification),
-which provides the **on-chain verification artifacts** (Solidity implementation + gas harnesses) used as a primary vendor source.
+## PQ aggregation surfaces (BLS → PQ) — why this matters
 
-It exists to answer one practical question for Ethereum engineers:
+Ethereum's BLS aggregation provides scalability via algebraic structure, but practical verification still includes
+linear work to reconstruct aggregate public keys from participation bitfields. Post-quantum signature families lose
+this algebraic aggregation property, pushing the system toward **proof-based aggregation** (recursive SNARKs or
+folding / accumulation schemes).
 
-> **How expensive is "real security" on EVM — once you normalize gas by a declared security target and by protocol constraints?**
+As a result, "gas per verify" alone is insufficient: engineering decisions require **surface-aware, security-normalized**
+benchmarks across L1/L2/AA verification surfaces and, eventually, PQ aggregation proof verification surfaces.
 
-In other words: **"gas/verify" is not enough** if the protocol envelope bounds end-to-end security even when the wallet uses PQ signatures.
+See: [spec/pq_signature_aggregation_context.md](spec/pq_signature_aggregation_context.md)
 
 ---
 
@@ -135,6 +130,16 @@ If you have 10 minutes:
 
 ## Why This Exists
 
+This repository is an experimental benchmarking lab spun out of  
+[`ml-dsa-65-ethereum-verification`](https://github.com/pipavlo82/ml-dsa-65-ethereum-verification),
+which provides the **on-chain verification artifacts** (Solidity implementation + gas harnesses) used as a primary vendor source.
+
+It exists to answer one practical question for Ethereum engineers:
+
+> **How expensive is "real security" on EVM — once you normalize gas by a declared security target and by protocol constraints?**
+
+In other words: **"gas/verify" is not enough** if the protocol envelope bounds end-to-end security even when the wallet uses PQ signatures.
+
 This is a **measurement lab and methodology**, not a comprehensive benchmark suite.
 
 Most public comparisons stop at "gas per verify". That hides critical differences:
@@ -169,7 +174,7 @@ Reports:
 - Example (Falcon Cat5 bounded by ECDSA envelope): [`spec/weakest_link_falcon_ecdsa.mmd`](spec/weakest_link_falcon_ecdsa.mmd)
 
 ---
-```markdown
+
 ## Dataset (source of truth = JSONL)
 
 - **Canonical results:** `data/results.jsonl` (one JSON object per line)
@@ -181,6 +186,7 @@ Reports:
 - `spec/explicit_lanes.md` — explicit message lanes (wormhole prevention) via `lane_assumption` / `wiring_lane`
 
 ### Rebuild CSV + reports from JSONL
+
 ```bash
 bash scripts/make_reports.sh
 ```
@@ -199,21 +205,18 @@ bash scripts/make_reports.sh
 - `gas` (or legacy `gas_verify`)
 - `denominator` + `denom_bits` (or legacy `security_metric_type` + `security_metric_value`)
 - **lane metadata:** `lane_assumption` + `wiring_lane` when applicable
-```
+
+---
+
 ## Reproducible Reports & Data Policy
 
 This repository follows a **single canonical source of truth** model for benchmark data and reports.
 
-## Canonical test vectors + calldata packs
+### Gas extraction modes (snapshot vs logs)
 
-To keep benchmarks comparable across implementations, this repo treats test vectors and calldata conventions as **external, pinned artifacts**.
-
-Canonical packs live in **pqevm-vector-packs** (vectors + calldata shapes):
-- repo: https://github.com/pipavlo82/pqevm-vector-packs
-- purpose: single source of truth for (scheme, variant, packing, calldata) so different projects do not benchmark different conventions
-
-This repo may reference packs via dataset metadata fields (e.g. `vector_pack_ref`, `vector_pack_id`, `vector_id`) when available.
-
+Some vendor harnesses expose gas via Foundry snapshot lines `(gas: N)`, while others print it via logs
+(e.g., `Gas used: N`). Runners support both via `scripts/extract_foundry_gas.py` using a per-run `needle`
+(e.g., `Gas used:`) so vendor repos do not need to be modified.
 
 ### Canonical Data
 
@@ -292,6 +295,7 @@ vector suite** that covers both common EVM-relevant approaches:
 - Verifier: `scripts/verify_vectors.py`
 
 ### Run locally
+
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
@@ -300,8 +304,21 @@ python scripts/verify_vectors.py data/vectors/xof_vectors.json
 ```
 
 ### CI
+
 A dedicated workflow validates vectors on every PR:
 - `.github/workflows/vectors.yml`
+
+---
+
+## Canonical test vectors + calldata packs
+
+To keep benchmarks comparable across implementations, this repo treats test vectors and calldata conventions as **external, pinned artifacts**.
+
+Canonical packs live in **pqevm-vector-packs** (vectors + calldata shapes):
+- repo: https://github.com/pipavlo82/pqevm-vector-packs
+- purpose: single source of truth for (scheme, variant, packing, calldata) so different projects do not benchmark different conventions
+
+This repo may reference packs via dataset metadata fields (e.g. `vector_pack_ref`, `vector_pack_id`, `vector_id`) when available.
 
 ---
 
@@ -442,10 +459,11 @@ Columns:
 - `gas_per_secure_bit` — computed as `gas_verify / security_metric_value`
 - `hash_profile` — e.g., `keccak256` or `unknown`
 - `notes` — context + refs (runner, branch, extraction method)
-- `lane_assumption (optional): explicit | implicit_or_legacy
+- `lane_assumption` (optional): `explicit` | `implicit_or_legacy`
 - `wiring_lane` (optional): canonical lane id (e.g., `EVM_SIG_LANE_V0`)
+
 **Lane rule (signatures):** comparable signature benches SHOULD set `lane_assumption=explicit` and a concrete `wiring_lane`
-(e.g., `EVM_SIG_LANE_V0`). Records with different `wiring_lane` MUST NOT be compared as “the same surface” (avoid
+(e.g., `EVM_SIG_LANE_V0`). Records with different `wiring_lane` MUST NOT be compared as "the same surface" (avoid
 domain-separation wormholes). See `spec/explicit_lanes.md`.
 
 Additional (optional) fields used for composed pipelines:
@@ -587,6 +605,8 @@ on-chain execution proofs for reproducibility.
 ### Documentation
 - **PreA (packedA_ntt) convention:** Vendor doc (pinned): https://github.com/pipavlo82/ml-dsa-65-ethereum-verification/blob/6d58ce9e64b4c499fc52395e01e2bfbcd967d441/docs/preA_packedA_ntt.md
 - **On-chain proof runner:** Vendor script (pinned): https://github.com/pipavlo82/ml-dsa-65-ethereum-verification/blob/6d58ce9e64b4c499fc52395e01e2bfbcd967d441/script/RunPreAOnChain.s.sol
+
+###
 
 ### How to reproduce (local anvil)
 
