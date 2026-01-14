@@ -169,7 +169,37 @@ Reports:
 - Example (Falcon Cat5 bounded by ECDSA envelope): [`spec/weakest_link_falcon_ecdsa.mmd`](spec/weakest_link_falcon_ecdsa.mmd)
 
 ---
+```markdown
+## Dataset (source of truth = JSONL)
 
+- **Canonical results:** `data/results.jsonl` (one JSON object per line)
+- **Derived CSV:** `data/results.csv` (regenerated from JSONL for compatibility with reports)
+
+### Specs
+- `spec/dataset.md` — overview + conventions
+- `spec/dataset_schema.md` — canonical schema + legacy-compat contract (CSV/reports)
+- `spec/explicit_lanes.md` — explicit message lanes (wormhole prevention) via `lane_assumption` / `wiring_lane`
+
+### Rebuild CSV + reports from JSONL
+```bash
+bash scripts/make_reports.sh
+```
+
+### Adding a new benchmark row (rule of the repo)
+
+Append via `scripts/parse_bench.py` (enforces canonical keys and backfills legacy keys for CSV/reports):
+
+```bash
+python3 scripts/parse_bench.py path/to/new_result.json
+bash scripts/make_reports.sh
+```
+
+**Required minimum fields** in the input JSON:
+- `scheme`, `bench_name`, `chain_profile`
+- `gas` (or legacy `gas_verify`)
+- `denominator` + `denom_bits` (or legacy `security_metric_type` + `security_metric_value`)
+- **lane metadata:** `lane_assumption` + `wiring_lane` when applicable
+```
 ## Reproducible Reports & Data Policy
 
 This repository follows a **single canonical source of truth** model for benchmark data and reports.
