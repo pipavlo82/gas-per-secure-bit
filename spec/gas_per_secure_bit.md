@@ -47,8 +47,7 @@ Each benchmark record MUST include:
 Each benchmark record MAY include:
 
 - lane_assumption (explicit_lane_v0 | implicit_or_legacy)
-- wiring_lane (canonical lane id, e.g. EVM_SIG_LANE_V0)
-
+- wiring_lane (canonical lane id, e.g. EVM_SIG_LANE_V0 | EVM_ZK_FROM_PQ_LANE_V0)
 ### Optional metadata: key storage realism
 
 Bench records MAY include `key_storage_assumption` to make off-chain key handling explicit. This is metadata (orthogonal to on-chain gas), intended to avoid mixing threat models when comparing results.

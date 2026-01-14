@@ -35,6 +35,7 @@ python3 scripts/make_protocol_readiness.py
 | randao | `randao::mix_for_sample_selection_surface` | 13081 | 32 | 128 | - | - |  |
 | sigproto | `sigproto::eip7932_precompile_assumption` | 0 | 256 | 256 | - | - |  |
 | vrf_pq | `vrf_pq::pq_vrf_target_assumption` | 0 | 192 | 192 | - | - |  |
+| zk_groth16_bn254 | `zk_groth16_bn254::groth16_bn254_pairing4_surface` | 355364 | 128 | 128 | - | - |  |
 
 Notes:
 - `effective_security_bits` is conservative: it never exceeds the weakest dependency in `depends_on`.

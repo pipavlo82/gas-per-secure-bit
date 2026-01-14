@@ -47,6 +47,19 @@ Example canonical form:
 `hybrid(ecdsa_secp256k1,mldsa65_fips204_shake256_v0)`
 
 ---
+## Canonical wiring lanes (v0)
+
+These lane IDs are used in `data/results.jsonl` via `wiring_lane` to prevent
+scope-mixing (“apples to oranges”) across enforcement paths.
+
+- `EVM_SIG_LANE_V0`
+  Native signature verification on EVM (Solidity / contract-level verify surfaces).
+  Examples: ERC-7913 verifier ABI, ERC-1271, AA validateUserOp (EntryPoint-bound).
+
+- `EVM_ZK_FROM_PQ_LANE_V0`
+  L1 enforcement via ZK proof verification **derived from a PQ signature**.
+  This measures “verifier gas + calldata” for a proof system (e.g., Groth16 BN254),
+  **not** native PQ signature verification.
 
 ## AA-specific guidance
 

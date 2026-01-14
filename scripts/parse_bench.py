@@ -126,6 +126,55 @@ def provenance_override(raw: Dict[str, Any]) -> Tuple[Optional[str], Optional[st
     return repo, commit, path
 
 
+def _ensure_canonical_and_legacy_keys(out: Dict[str, Any]) -> None:
+    """
+    Canonical (new) keys:
+      - gas
+      - denominator
+      - denom_bits
+      - gas_per_bit
+
+    Legacy keys (CSV/reports compatibility):
+      - gas_verify
+      - security_metric_type
+      - security_metric_value
+      - gas_per_secure_bit
+
+    Policy:
+      - If canonical is missing but legacy exists: derive canonical.
+      - If legacy is missing but canonical exists: derive legacy.
+      - Keep existing values if present (do not override).
+    """
+    # -------- derive canonical from legacy (if needed)
+    if "gas" not in out and "gas_verify" in out and out["gas_verify"] is not None:
+        out["gas"] = out["gas_verify"]
+
+    if "denominator" not in out and "security_metric_type" in out and out["security_metric_type"] is not None:
+        out["denominator"] = out["security_metric_type"]
+
+    if "denom_bits" not in out and "security_metric_value" in out and out["security_metric_value"] is not None:
+        out["denom_bits"] = out["security_metric_value"]
+
+    if "gas_per_bit" not in out:
+        g = out.get("gas")
+        b = out.get("denom_bits")
+        if isinstance(g, (int, float)) and isinstance(b, (int, float)) and b > 0:
+            out["gas_per_bit"] = float(g) / float(b)
+
+    # -------- derive legacy from canonical (if needed)
+    if "gas_verify" not in out and "gas" in out:
+        out["gas_verify"] = out["gas"]
+
+    if "security_metric_type" not in out and "denominator" in out:
+        out["security_metric_type"] = out["denominator"]
+
+    if "security_metric_value" not in out and "denom_bits" in out:
+        out["security_metric_value"] = out["denom_bits"]
+
+    if "gas_per_secure_bit" not in out and "gas_per_bit" in out:
+        out["gas_per_secure_bit"] = out["gas_per_bit"]
+
+
 def normalize_row(raw: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, Any]:
     # Backward-compatible top-level provenance
     repo = get_any(raw, ["repo"], defaults["repo"])
@@ -151,12 +200,29 @@ def normalize_row(raw: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, An
         raise ValueError("Missing required fields: scheme and bench_name")
 
     chain_profile = normalize_chain_profile(get_any(raw, ["chain_profile", "chain-profile"], "unknown"))
-    gas_verify = int(get_any(raw, ["gas_verify", "gas"], 0))
 
-    sec_type = get_any(raw, ["security_metric_type", "security-type"], "unknown")
-    sec_val = float(get_any(raw, ["security_metric_value", "security-value"], 0.0))
+    # Canonical gas/security (preferred)
+    gas = get_any(raw, ["gas"], None)
+    if gas is None:
+        gas = get_any(raw, ["gas_verify"], 0)
+    gas = int(gas)
 
-    gas_per_bit: Optional[float] = (gas_verify / sec_val) if sec_val > 0 else None
+    denominator = get_any(raw, ["denominator"], None)
+    if denominator is None:
+        denominator = get_any(raw, ["security_metric_type", "security-type"], "unknown")
+
+    denom_bits = get_any(raw, ["denom_bits"], None)
+    if denom_bits is None:
+        denom_bits = get_any(raw, ["security_metric_value", "security-value"], 0.0)
+    denom_bits = float(denom_bits)
+
+    gas_per_bit: Optional[float] = (gas / denom_bits) if denom_bits > 0 else None
+
+    # Keep legacy names too (source compatibility)
+    gas_verify = int(get_any(raw, ["gas_verify"], gas))
+    sec_type = get_any(raw, ["security_metric_type", "security-type"], denominator)
+    sec_val = float(get_any(raw, ["security_metric_value", "security-value"], denom_bits))
+    gas_per_secure_bit = gas_per_bit
 
     hash_profile = get_any(raw, ["hash_profile", "hash"], "unknown")
     notes = get_any(raw, ["notes"], "")
@@ -170,10 +236,19 @@ def normalize_row(raw: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, An
         "scheme": scheme,
         "bench_name": bench_name,
         "chain_profile": chain_profile,
+
+        # Canonical
+        "gas": gas,
+        "denominator": denominator,
+        "denom_bits": denom_bits,
+        "gas_per_bit": gas_per_bit,
+
+        # Legacy (for CSV/reports)
         "gas_verify": gas_verify,
         "security_metric_type": sec_type,
         "security_metric_value": sec_val,
-        "gas_per_secure_bit": gas_per_bit,
+        "gas_per_secure_bit": gas_per_secure_bit,
+
         "hash_profile": hash_profile,
         "notes": notes,
     }
@@ -185,6 +260,18 @@ def normalize_row(raw: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, An
             out["provenance"]["path"] = p_path
 
     # vNext passthrough fields
+    surface_id = raw.get("surface_id")
+    if isinstance(surface_id, str) and surface_id:
+        out["surface_id"] = surface_id
+
+    lane_assumption = raw.get("lane_assumption")
+    if isinstance(lane_assumption, str) and lane_assumption:
+        out["lane_assumption"] = lane_assumption
+
+    wiring_lane = raw.get("wiring_lane")
+    if isinstance(wiring_lane, str) and wiring_lane:
+        out["wiring_lane"] = wiring_lane
+
     surface_class = get_any(raw, ["surface_class", "surface"], None)
     if isinstance(surface_class, str) and surface_class:
         out["surface_class"] = surface_class
@@ -197,11 +284,30 @@ def normalize_row(raw: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, An
     if isinstance(aggregation_mode, str) and aggregation_mode:
         out["aggregation_mode"] = aggregation_mode
 
+    key_storage_assumption = raw.get("key_storage_assumption")
+    if isinstance(key_storage_assumption, str) and key_storage_assumption:
+        out["key_storage_assumption"] = key_storage_assumption
+
+    vector_pack_ref = raw.get("vector_pack_ref")
+    if isinstance(vector_pack_ref, str) and vector_pack_ref:
+        out["vector_pack_ref"] = vector_pack_ref
+
+    vector_pack_id = raw.get("vector_pack_id")
+    if isinstance(vector_pack_id, str) and vector_pack_id:
+        out["vector_pack_id"] = vector_pack_id
+
+    vector_id = raw.get("vector_id")
+    if isinstance(vector_id, str) and vector_id:
+        out["vector_id"] = vector_id
+
     depends_on = raw.get("depends_on")
     if isinstance(depends_on, list) and depends_on:
         out["depends_on"] = [str(x) for x in depends_on]
     elif isinstance(depends_on, str) and depends_on.strip():
         out["depends_on"] = depends_on.strip()
+
+    # Ensure both canonical and legacy keys exist (even if upstream sent mixed)
+    _ensure_canonical_and_legacy_keys(out)
 
     return out
 
@@ -268,7 +374,7 @@ def regen_csv_from_jsonl(jsonl_path: Path, csv_path: Path) -> Tuple[int, int]:
                 continue
             rows.append(json.loads(line))
 
-    # Current repo schema: 19 cols
+    # CSV schema (legacy-compatible; reports depend on these columns)
     fields = [
         "ts_utc",
         "repo",
@@ -296,6 +402,9 @@ def regen_csv_from_jsonl(jsonl_path: Path, csv_path: Path) -> Tuple[int, int]:
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()
         for r in rows:
+            # Ensure legacy keys exist even if JSONL row only had canonical keys
+            _ensure_canonical_and_legacy_keys(r)
+
             row_out = {k: r.get(k, "") for k in fields}
 
             dep = r.get("depends_on")
@@ -308,7 +417,7 @@ def regen_csv_from_jsonl(jsonl_path: Path, csv_path: Path) -> Tuple[int, int]:
 
             row_out["provenance"] = _normalize_provenance_for_csv(r.get("provenance"))
 
-            if "key_storage_assumption" not in r:
+            if "key_storage_assumption" not in r or not str(r.get("key_storage_assumption") or "").strip():
                 row_out["key_storage_assumption"] = "unknown"
 
             w.writerow(row_out)

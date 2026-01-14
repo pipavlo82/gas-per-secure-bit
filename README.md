@@ -734,3 +734,19 @@ As a result, "gas per verify" alone is insufficient: engineering decisions requi
 benchmarks across L1/L2/AA verification surfaces and, eventually, PQ aggregation proof verification surfaces.
 
 See: [spec/pq_signature_aggregation_context.md](spec/pq_signature_aggregation_context.md)
+
+## Dataset format (JSONL is source of truth)
+
+- Canonical results live in `data/results.jsonl` (one JSON object per line).
+- `data/results.csv` is regenerated from JSONL for convenience/backward compatibility.
+
+Schema and rules:
+- `spec/dataset.md` — overview and usage
+- `spec/dataset_schema.md` — canonical schema + legacy compatibility contract
+- `spec/explicit_lanes.md` — explicit message lanes (wormhole prevention) used via `lane_assumption` / `wiring_lane`
+
+Rebuild CSV + reports from JSONL:
+```bash
+bash scripts/make_reports.sh
+
+```
