@@ -53,6 +53,44 @@
 
 ## Methodology (surfaces + weakest-link)
 
+The benchmark lab is organized around (a) **verification surfaces** and (b) an optional **weakest-link** dependency graph.
+Primary references:
+
+- Surfaces / taxonomy (S0–S3): `spec/case_graph.md`
+- Case catalog / baseline nodes: `spec/case_catalog.md`
+- Generated weakest-link report: `reports/weakest_link_report.md`
+- One-page summary: `reports/summary.md`
+
+## Explicit Message Lanes (wormholes)
+
+To prevent cross-surface replay-by-interpretation, this repo defines a minimal **lane envelope** (v0) that MUST be bound into digests: `lane_version`, `chainId`, `verifierBinding`, `surface_id`, `algo_id` (incl. hash/XOF lane), and `payload`.
+
+Spec: [`spec/explicit_lanes.md`](spec/explicit_lanes.md)
+
+**Dataset rule:** if a benchmark does not implement an explicit lane envelope, it MUST declare `lane_assumption` accordingly (e.g., `implicit_or_unknown`) and MUST NOT be compared across surfaces as if it were lane-safe.
+
+---
+
+To avoid mixing benchmark scopes, the dataset supports a surface taxonomy and an optional dependency graph:
+
+- **Canonical execution surfaces (S0–S3):** `spec/case_graph.md`
+- **Case catalog / baseline nodes:** `spec/case_catalog.md`
+- **Weakest-link report (generated):** `reports/weakest_link_report.md`
+- **One-page status summary:** `reports/summary.md`
+
+We separate **app-facing** verifier surfaces (ERC-1271 / ERC-7913 / AA) from **protocol-facing** surfaces
+(e.g., a precompile-style verifier boundary, tagged as `sig::protocol`) to avoid mixing scopes.
+
+**Surface taxonomy:** ERC-7913 adapters represent the app-facing verification boundary (wallets, dapps, AA integration), while `sig::protocol` (e.g., EIP-7932 candidate) represents a protocol-facing interface (precompile / enshrined verifier boundary).
+
+For any pipeline record with `depends_on[]`:
+effective_security_bits = min(security_bits(dep_i))
+
+Where `security_bits(x)` is derived from records with `security_metric_type ∈ {security_equiv_bits, lambda_eff, H_min}`.
+
+This repo may record multiple denominators for the same bench (e.g., `lambda_eff` for conservative crypto strength and `security_equiv_bits` for declared normalization) as separate records; comparisons must state which denominator is used.
+
+
 To avoid mixing benchmark scopes, the dataset supports a surface taxonomy and an optional dependency graph:
 
 - **Canonical execution surfaces (S0–S3):** `spec/case_graph.md`
@@ -101,14 +139,14 @@ See: [spec/pq_signature_aggregation_context.md](spec/pq_signature_aggregation_co
 
 ## Core Metric
 
-GitHub does **not** render LaTeX by default, so the canonical formula is written in plain form:
+To keep rendering consistent across GitHub views, the canonical formula is written in plain form:
 
 > **gas_per_bit = gas_verify / security_metric_value**
 
 Where:
 - **gas_verify** — on-chain gas used to verify a signature / proof (or a verifiable computation step).
 - **security_metric_type** — what the denominator represents:
-  - for **signatures / proofs (today)**: `security_equiv_bits` (a declared *classical-equivalent bits* normalization convention)
+  - for **signatures / proofs (today)**: `security_equiv_bits` (declared normalization bits used by this repo; e.g., Category→bits mapping)
   - for **randomness / VRF / protocol surfaces**: `H_min` (min-entropy of the verified output under an explicit threat model)
 - **security_metric_value** — the denominator value in bits.
 
@@ -408,7 +446,7 @@ See also:
 
 ### Signature & AA Benchmarks
 
-| Scheme        | Bench name                                | gas_verify  | security_metric_value (bits) | gas / secure-bit |
+| Scheme          | Bench name                          | gas_verify | security_metric_value (bits) | gas / denom-bit |
 |---------------|-------------------------------------------|------------:|-----------------------------:|-----------------:|
 | **ECDSA**     | ecdsa_verify_ecrecover_foundry            | 21,126      | 128                          | 165.047          |
 | **ECDSA**     | ecdsa_erc1271_isValidSignature_foundry    | 21,413      | 128                          | 167.289          |
@@ -423,7 +461,7 @@ See also:
 
 ### Protocol Surfaces (measured)
 
-| Scheme          | Bench name                          | gas_verify | security_metric_value (bits) | gas / secure-bit |
+| Scheme          | Bench name                          | gas_verify | security_metric_value (bits) | gas / denom-bit |
 |-----------------|-------------------------------------|----------:|-----------------------------:|-----------------:|
 | **RANDAO**      | l1_randao_mix_surface               | 5,820     | 32 (H_min)                   | 181.875          |
 | **RANDAO**      | mix_for_sample_selection_surface    | 13,081    | 32 (H_min)                   | 408.781          |
@@ -520,10 +558,10 @@ This repo separates:
 | Scheme | Security Category | `security_equiv_bits` | Notes |
 |--------|-------------------|----------------------|-------|
 | **ECDSA (secp256k1)** | - | 128 | classical security convention |
-| **ML-DSA-65 (FIPS-204)** | Category 3 | 192 | classical-equivalent convention |
-| **Falcon-1024** | Category 5 | 256 | classical-equivalent convention |
+| **ML-DSA-65 (FIPS-204)** | Category 3 | 192 | declared normalization convention (Category→bits mapping used here) |
+| **Falcon-1024** | Category 5 | 256 | declared normalization convention (Category→bits mapping used here) |
 
-**Important:** These are normalization conventions, not security proofs. The rule is that they are explicit and applied consistently.
+**Important:** These are normalization conventions, not security proofs or equivalence claims. The rule is that they are explicit and applied consistently.
 
 **Dilithium normalization** is parameter-set dependent (e.g., Dilithium2/3/5). Until the vendor variant is pinned to a declared set, ETHDILITHIUM rows are recorded with `lambda_eff=128` for budgeting comparability.
 
@@ -771,7 +809,7 @@ This is an experimental benchmarking lab. Results are not a security proof. Use 
 ## Maintainer
 
 Maintained by Pavlo Tvardovskyi (GitHub: @pipavlo82)  
-Contact: shtomko@gmail.com
+Preferred contact: open a GitHub issue or discussion in this repository. (Email available on request for sensitive coordination.)
 
 ---
 

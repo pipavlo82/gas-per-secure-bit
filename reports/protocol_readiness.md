@@ -27,9 +27,9 @@ python3 scripts/make_protocol_readiness.py
 | falcon1024 | `falcon1024::qa_handleOps_userop_foundry_weakest_link_sigproto` | 10966076 | 256 | 256 | - | - |  |
 | mldsa65 | `mldsa65::mldsa65_erc1271_packedA_wallet_callctx` | 95392 | 128 | 192 | - | - |  |
 | mldsa65 | `mldsa65::mldsa65_erc7913_verifyWithPackedA_callctx` | 39772 | 128 | 192 | - | - |  |
-| mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho0_log` | 1499354 | 128 | 192 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json | - |  |
-| mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho1_log` | 1499354 | 128 | 192 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json | - |  |
-| mldsa65 | `mldsa65::verify_poc_foundry` | 68901612 | 128 | 192 | - | - |  |
+| mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho0_log` | 1499354 | 192 | 192 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json | - |  |
+| mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho1_log` | 1499354 | 192 | 192 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json | - |  |
+| mldsa65 | `mldsa65::verify_poc_foundry` | 68901612 | 192 | 192 | - | - |  |
 | p256 | `p256::ethdilithium_p256verify_log` | 22124 | 128 | 128 | - | - |  |
 | randao | `randao::l1_randao_mix_surface` | 5820 | 32 | 128 | - | - |  |
 | randao | `randao::mix_for_sample_selection_surface` | 13081 | 32 | 128 | - | - |  |
@@ -65,9 +65,9 @@ bash scripts/make_reports.sh
 
 | bench | gas_verify | denom | value | gas/bit | vendor commit | notes |
 |---|---:|---|---:|---:|---|---|
-| `verify_poc_foundry` | 68,901,612 | `lambda_eff` | 128.0 | 538293.84375 | `d9aabc14cf13` | sec192=192 gpb192=358,862.5625 | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle... |
-| `preA_compute_w_fromPackedA_ntt_rho0_log` | 1,499,354 | `lambda_eff` | 128.0 | 11713.703125 | `d9aabc14cf13` | sec192=192 gpb192=7,809.135417 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json ml-dsa-65-ethereum-verification ... |
-| `preA_compute_w_fromPackedA_ntt_rho1_log` | 1,499,354 | `lambda_eff` | 128.0 | 11713.703125 | `d9aabc14cf13` | sec192=192 gpb192=7,809.135417 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json ml-dsa-65-ethereum-verification ... |
+| `verify_poc_foundry` | 68,901,612 | `security_equiv_bits` | 192.0 | 358862.5625 | `d9aabc14cf13` | sec192=192 gpb192=358,862.5625 | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle... |
+| `preA_compute_w_fromPackedA_ntt_rho0_log` | 1,499,354 | `security_equiv_bits` | 192.0 | 7809.135416666667 | `d9aabc14cf13` | sec192=192 gpb192=7,809.135417 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json ml-dsa-65-ethereum-verification ... |
+| `preA_compute_w_fromPackedA_ntt_rho1_log` | 1,499,354 | `security_equiv_bits` | 192.0 | 7809.135416666667 | `d9aabc14cf13` | sec192=192 gpb192=7,809.135417 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json ml-dsa-65-ethereum-verification ... |
 <!-- MLDSA65_VENDOR_END -->
 
 <!-- FALCON_VENDOR_BEGIN -->
