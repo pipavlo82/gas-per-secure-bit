@@ -55,6 +55,8 @@ To prevent cross-surface replay-by-interpretation, this repo defines a minimal *
 
 Spec: [`spec/explicit_lanes.md`](spec/explicit_lanes.md)
 
+**Dataset rule:** if a benchmark does not implement an explicit lane envelope, it MUST declare `lane_assumption` accordingly (e.g., `implicit_or_unknown`) and MUST NOT be compared across surfaces as if it were lane-safe.
+
 ---
 
 
@@ -102,14 +104,14 @@ In other words: **"gas/verify" is not enough** if the protocol envelope bounds e
 
 ## Core Metric
 
-GitHub does **not** render LaTeX by default, so the canonical formula is written in plain form:
+To keep rendering consistent across GitHub views, the canonical formula is written in plain form:
 
 > **gas_per_bit = gas_verify / security_metric_value**
 
 Where:
 - **gas_verify** — on-chain gas used to verify a signature / proof (or a verifiable computation step).
 - **security_metric_type** — what the denominator represents:
-  - for **signatures / proofs (today)**: `security_equiv_bits` (a declared *classical-equivalent bits* normalization convention)
+  - for **signatures / proofs (today)**: `security_equiv_bits` (declared normalization bits used by this repo; e.g., Category→bits mapping)
   - for **randomness / VRF / protocol surfaces**: `H_min` (min-entropy of the verified output under an explicit threat model)
 - **security_metric_value** — the denominator value in bits.
 
@@ -320,7 +322,7 @@ See also:
 
 ### Signature & AA Benchmarks
 
-| Scheme        | Bench name                                | gas_verify  | security_metric_value (bits) | gas / secure-bit |
+| Scheme          | Bench name                          | gas_verify | security_metric_value (bits) | gas / denom-bit |
 |---------------|-------------------------------------------|------------:|-----------------------------:|-----------------:|
 | **ECDSA**     | ecdsa_verify_ecrecover_foundry            | 21,126      | 128                          | 165.047          |
 | **ECDSA**     | ecdsa_erc1271_isValidSignature_foundry    | 21,413      | 128                          | 167.289          |
@@ -335,7 +337,7 @@ See also:
 
 ### Protocol Surfaces (measured)
 
-| Scheme          | Bench name                          | gas_verify | security_metric_value (bits) | gas / secure-bit |
+| Scheme          | Bench name                          | gas_verify | security_metric_value (bits) | gas / denom-bit |
 |-----------------|-------------------------------------|----------:|-----------------------------:|-----------------:|
 | **RANDAO**      | l1_randao_mix_surface               | 5,820     | 32 (H_min)                   | 181.875          |
 | **RANDAO**      | mix_for_sample_selection_surface    | 13,081    | 32 (H_min)                   | 408.781          |
@@ -463,10 +465,10 @@ This repo separates:
 | Scheme | Security Category | `security_equiv_bits` | Notes |
 |--------|-------------------|----------------------|-------|
 | **ECDSA (secp256k1)** | - | 128 | classical security convention |
-| **ML-DSA-65 (FIPS-204)** | Category 3 | 192 | classical-equivalent convention |
-| **Falcon-1024** | Category 5 | 256 | classical-equivalent convention |
+| **ML-DSA-65 (FIPS-204)** | Category 3 | 192 | declared normalization convention (Category→bits mapping used here) |
+| **Falcon-1024** | Category 5 | 256 | declared normalization convention (Category→bits mapping used here) |
 
-**Important:** These are normalization conventions, not security proofs. The rule is that they are explicit and applied consistently.
+**Important:** These are normalization conventions, not security proofs or equivalence claims. The rule is that they are explicit and applied consistently.
 
 **Dilithium normalization** is parameter-set dependent (e.g., Dilithium2/3/5). Until the vendor variant is pinned to a
 declared set, ETHDILITHIUM rows are recorded with `lambda_eff=128` for budgeting comparability.
@@ -706,7 +708,7 @@ This is an experimental benchmarking lab. Results are not a security proof. Use 
 ## Maintainer
 
 Maintained by Pavlo Tvardovskyi (GitHub: @pipavlo82)  
-Contact: shtomko@gmail.com
+Preferred contact: open a GitHub issue or discussion in this repository. (Email available on request for sensitive coordination.)
 
 ---
 
