@@ -6,6 +6,8 @@
 
 **This is a lab, not a final leaderboard.**
 
+- `lambda_eff` is a budgeting baseline denominator (engineering normalization), while `security_equiv_bits` is the secure-bit denominator for security-level comparisons.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Built with Foundry](https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg)](https://getfoundry.sh/)
 
@@ -19,6 +21,7 @@
 - [Explicit Message Lanes (wormholes)](#explicit-message-lanes-wormholes)
 - [PQ aggregation surfaces (BLS → PQ) — why this matters](#pq-aggregation-surfaces-bls--pq--why-this-matters)
 - [Core Metric](#core-metric)
+- [Denominators: Budgeting Baseline vs Secure-Bit](#denominators-budgeting-baseline-vs-secure-bit)
 - [Public Review Entry Points](#public-review-entry-points)
 - [Why This Exists](#why-this-exists)
 - [New: Weakest-link + Protocol Readiness Surfaces](#new-weakest-link--protocol-readiness-surfaces)
@@ -114,6 +117,43 @@ For the current signature-only dataset, we typically report:
 > **gas_per_secure_bit = gas_verify / security_equiv_bits**
 
 This allows apples-to-apples comparisons across schemes at different security targets, **under explicit assumptions**.
+
+---
+
+## Denominators: Budgeting Baseline vs Secure-Bit
+
+This repository tracks **two different denominators** that serve **different purposes**:
+
+### 1) `lambda_eff` — baseline / budgeting denominator (NOT "secure-bit")
+
+`lambda_eff` is a **baseline budgeting scale**, useful for:
+- Comparing like-for-like engineering surfaces under a fixed budget target
+- Tracking progress over time (regressions/improvements)
+- Producing "gas per baseline bit" as an **internal normalization**
+
+**Important:** `lambda_eff` is **not** a claim about classical security, PQ security, or equivalence.  
+It is a *chosen baseline knob* (e.g., 128) for budgeting and reproducibility.
+
+**Example:**
+- gas = 68,901,612
+- lambda_eff = 128 → gas_per_baseline_bit = 538,293.84 (budgeting ratio only)
+
+### 2) `security_equiv_bits` — secure-bit denominator
+
+`security_equiv_bits` is used for "gas per secure bit" style comparisons:
+
+```
+gas_per_secure_bit = gas / security_equiv_bits
+```
+
+This is the denominator that corresponds to a declared security target (e.g., NIST category mapping to 128/192/256).
+It is used when the goal is **cross-scheme security-level comparison**, not budgeting.
+
+**Example:**
+- gas = 68,901,612
+- security_equiv_bits = 192 → gas_per_secure_bit = 358,862.56
+
+**Key distinction:** When comparing schemes at different security levels, always use `security_equiv_bits`. When tracking engineering progress on a single scheme, `lambda_eff` provides a stable baseline.
 
 ---
 
@@ -364,7 +404,7 @@ See also:
 **Source of truth:** `data/results.jsonl` (CSV is deterministically rebuilt by `scripts/parse_bench.py --regen` via `./scripts/make_reports.sh`).
 
 > **Normalization note:** For ML-DSA-65 we report `security_equiv_bits=192` (FIPS-204 Category 3 convention) in tables.
-> Some raw vendor ingests may also record `lambda_eff=128` as a budgeting denominator; those are clearly labeled as baseline and are not used for "secure-bit" comparisons.
+> Some raw vendor ingests may also record `lambda_eff=128` as a **budgeting denominator** (engineering baseline); those are clearly labeled and represent "gas per baseline bit" for budgeting purposes, NOT "gas per secure bit" or security claims.
 
 ### Signature & AA Benchmarks
 
@@ -485,21 +525,26 @@ This repo separates:
 
 **Important:** These are normalization conventions, not security proofs. The rule is that they are explicit and applied consistently.
 
-**Dilithium normalization** is parameter-set dependent (e.g., Dilithium2/3/5). Until the vendor variant is pinned to a
-declared set, ETHDILITHIUM rows are recorded with `lambda_eff=128` for budgeting comparability.
+**Dilithium normalization** is parameter-set dependent (e.g., Dilithium2/3/5). Until the vendor variant is pinned to a declared set, ETHDILITHIUM rows are recorded with `lambda_eff=128` for budgeting comparability.
 
-When `security_metric_type=lambda_eff`, the resulting `gas_per_secure_bit` column should be interpreted as a budgeting
-ratio (gas per assumed baseline), not a claim of equivalent classical security.
+### Optional Baseline Normalization (Budgeting-Only)
 
-### Optional Baseline Normalization (Separate Metric)
-
-If you want "per 128-bit baseline" as a convenience view:
+Some rows report an additional derived value using `lambda_eff` (e.g., 128) as a **budgeting baseline**:
 
 ```
-gas_per_128b = gas_verify / 128
+gas_per_baseline_bit = gas / lambda_eff
 ```
 
-Label it explicitly as baseline (not "secure-bit").
+This normalization is provided **only** to make budgeting-style comparisons easier and to keep results stable across iterations.
+
+**It is NOT:**
+- "Security equivalence"
+- "Classical security"  
+- A statement that the scheme provides `lambda_eff` bits of security
+
+**When to use each:**
+- For **security-level comparisons** across schemes → use `security_equiv_bits` and `gas_per_secure_bit`
+- For **budgeting / engineering progress tracking** → use `lambda_eff` and `gas_per_baseline_bit`
 
 ---
 
