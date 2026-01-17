@@ -6,8 +6,6 @@
 
 **This is a lab, not a final leaderboard.**
 
-- `lambda_eff` is a budgeting baseline denominator (engineering normalization), while `security_equiv_bits` is the secure-bit denominator for security-level comparisons.
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Built with Foundry](https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg)](https://getfoundry.sh/)
 
@@ -21,12 +19,11 @@
 - [Explicit Message Lanes (wormholes)](#explicit-message-lanes-wormholes)
 - [PQ aggregation surfaces (BLS → PQ) — why this matters](#pq-aggregation-surfaces-bls--pq--why-this-matters)
 - [Core Metric](#core-metric)
-- [Denominators: Budgeting Baseline vs Secure-Bit](#denominators-budgeting-baseline-vs-secure-bit)
 - [Public Review Entry Points](#public-review-entry-points)
 - [Why This Exists](#why-this-exists)
 - [New: Weakest-link + Protocol Readiness Surfaces](#new-weakest-link--protocol-readiness-surfaces)
-- [Dataset (JSONL is source of truth)](#dataset-jsonl-is-source-of-truth)
 - [Reproducible Reports & Data Policy](#reproducible-reports--data-policy)
+- [Gas extraction modes (snapshot vs logs)](#gas-extraction-modes-snapshot-vs-logs)
 - [XOF Vector Suite (Keccak-CTR vs FIPS SHAKE)](#xof-vector-suite-keccak-ctr-vs-fips-shake)
 - [Canonical test vectors + calldata packs](#canonical-test-vectors--calldata-packs)
 - [Measured Protocol Surfaces (EVM/L1)](#measured-protocol-surfaces-evml1)
@@ -34,14 +31,13 @@
 - [Current Dataset (EVM/L1) — Gas Snapshots](#current-dataset-evml1--gas-snapshots)
 - [What We Built](#what-we-built)
 - [Repo Layout](#repo-layout)
-- [Dataset Schema](#dataset-schema)
-- [Key storage assumption (annotation axis)](#key-storage-assumption-annotation-axis)
+- [Dataset Schema (CSV)](#dataset-schema-csv)
 - [Security Normalization (Explicit Assumptions)](#security-normalization-explicit-assumptions)
 - [Quick Start](#quick-start)
 - [PreA Convention (ML-DSA-65)](#prea-convention-ml-dsa-65)
+- [Key storage assumption (annotation axis)](#key-storage-assumption-annotation-axis)
 - [Vendor benchmarks (pinned refs)](#vendor-benchmarks-pinned-refs)
 - [Benchmarks Included](#benchmarks-included)
-  - [ZK proof verification surfaces (BN254)](#zk-proof-verification-surfaces-bn254)
 - [Related Work / References](#related-work--references)
 - [Roadmap](#roadmap)
 - [License](#license)
@@ -53,63 +49,16 @@
 
 ## Methodology (surfaces + weakest-link)
 
-The benchmark lab is organized around (a) **verification surfaces** and (b) an optional **weakest-link** dependency graph.
-Primary references:
-
-- Surfaces / taxonomy (S0–S3): `spec/case_graph.md`
-- Case catalog / baseline nodes: `spec/case_catalog.md`
-- Generated weakest-link report: `reports/weakest_link_report.md`
-- One-page summary: `reports/summary.md`
-
 ## Explicit Message Lanes (wormholes)
 
 To prevent cross-surface replay-by-interpretation, this repo defines a minimal **lane envelope** (v0) that MUST be bound into digests: `lane_version`, `chainId`, `verifierBinding`, `surface_id`, `algo_id` (incl. hash/XOF lane), and `payload`.
 
 Spec: [`spec/explicit_lanes.md`](spec/explicit_lanes.md)
-
-
-
-
-### ZK requirement: lanes MUST be public inputs
-
-If a verification scheme is wrapped into a SNARK/STARK, the **lane envelope** MUST be bound as **public inputs**
-(or otherwise unforgeably committed and externally verified), at minimum:
-
-- `lane_version` (domain tag)
-- `chainId`
-- `verifierBinding` (e.g., EntryPoint / precompile identity / verifier contract address)
-- `surface_id`
-- `algo_id` (including hash/XOF lane)
-- `payload_digest`
-
-Otherwise, the proof system can become a semantic replay vector (“wormhole”) across surfaces.
-
-Public review thread (Ethereum Magicians):
-- `https://ethereum-magicians.org/t/explicit-message-lanes-for-pq-hybrid-signatures-avoiding-domain-separation-wormholes/2745
 
 **Dataset rule:** if a benchmark does not implement an explicit lane envelope, it MUST declare `lane_assumption` accordingly (e.g., `implicit_or_unknown`) and MUST NOT be compared across surfaces as if it were lane-safe.
 
 ---
 
-To avoid mixing benchmark scopes, the dataset supports a surface taxonomy and an optional dependency graph:
-
-- **Canonical execution surfaces (S0–S3):** `spec/case_graph.md`
-- **Case catalog / baseline nodes:** `spec/case_catalog.md`
-- **Weakest-link report (generated):** `reports/weakest_link_report.md`
-- **One-page status summary:** `reports/summary.md`
-
-We separate **app-facing** verifier surfaces (ERC-1271 / ERC-7913 / AA) from **protocol-facing** surfaces
-(e.g., a precompile-style verifier boundary, tagged as `sig::protocol`) to avoid mixing scopes.
-
-**Surface taxonomy:** ERC-7913 adapters represent the app-facing verification boundary (wallets, dapps, AA integration), while `sig::protocol` (e.g., EIP-7932 candidate) represents a protocol-facing interface (precompile / enshrined verifier boundary).
-
-For any pipeline record with `depends_on[]`:
-effective_security_bits = min(security_bits(dep_i))
-
-Where `security_bits(x)` is derived from records with `security_metric_type ∈ {security_equiv_bits, lambda_eff, H_min}`.
-
-This repo may record multiple denominators for the same bench (e.g., `lambda_eff` for conservative crypto strength and `security_equiv_bits` for declared normalization) as separate records; comparisons must state which denominator is used.
-
 
 To avoid mixing benchmark scopes, the dataset supports a surface taxonomy and an optional dependency graph:
 
@@ -133,27 +82,23 @@ Where `security_bits(x)` is derived from records with `security_metric_type ∈ 
 
 This repo may record multiple denominators for the same bench (e.g., `lambda_eff` for conservative crypto strength and `security_equiv_bits` for declared normalization) as separate records; comparisons must state which denominator is used.
 
----
+### Gas extraction modes (snapshot vs logs)
 
-## Explicit Message Lanes (wormholes)
-
-To prevent cross-surface replay-by-interpretation, this repo defines a minimal **lane envelope** (v0) that MUST be bound into digests: `lane_version`, `chainId`, `verifierBinding`, `surface_id`, `algo_id` (incl. hash/XOF lane), and `payload`.
-
-Spec: [`spec/explicit_lanes.md`](spec/explicit_lanes.md)
+Some vendor harnesses expose gas via Foundry snapshot lines `(gas: N)`, while others print it via logs
+(e.g., `Gas used: N`). Runners support both via `scripts/extract_foundry_gas.py` using a per-run `needle`
+(e.g., `Gas used:`) so vendor repos do not need to be modified.
 
 ---
 
-## PQ aggregation surfaces (BLS → PQ) — why this matters
+This repository is an experimental benchmarking lab spun out of  
+[`ml-dsa-65-ethereum-verification`](https://github.com/pipavlo82/ml-dsa-65-ethereum-verification),
+which provides the **on-chain verification artifacts** (Solidity implementation + gas harnesses) used as a primary vendor source.
 
-Ethereum's BLS aggregation provides scalability via algebraic structure, but practical verification still includes
-linear work to reconstruct aggregate public keys from participation bitfields. Post-quantum signature families lose
-this algebraic aggregation property, pushing the system toward **proof-based aggregation** (recursive SNARKs or
-folding / accumulation schemes).
+It exists to answer one practical question for Ethereum engineers:
 
-As a result, "gas per verify" alone is insufficient: engineering decisions require **surface-aware, security-normalized**
-benchmarks across L1/L2/AA verification surfaces and, eventually, PQ aggregation proof verification surfaces.
+> **How expensive is "real security" on EVM — once you normalize gas by a declared security target and by protocol constraints?**
 
-See: [spec/pq_signature_aggregation_context.md](spec/pq_signature_aggregation_context.md)
+In other words: **"gas/verify" is not enough** if the protocol envelope bounds end-to-end security even when the wallet uses PQ signatures.
 
 ---
 
@@ -178,43 +123,6 @@ This allows apples-to-apples comparisons across schemes at different security ta
 
 ---
 
-## Denominators: Budgeting Baseline vs Secure-Bit
-
-This repository tracks **two different denominators** that serve **different purposes**:
-
-### 1) `lambda_eff` — baseline / budgeting denominator (NOT "secure-bit")
-
-`lambda_eff` is a **baseline budgeting scale**, useful for:
-- Comparing like-for-like engineering surfaces under a fixed budget target
-- Tracking progress over time (regressions/improvements)
-- Producing "gas per baseline bit" as an **internal normalization**
-
-**Important:** `lambda_eff` is **not** a claim about classical security, PQ security, or equivalence.  
-It is a *chosen baseline knob* (e.g., 128) for budgeting and reproducibility.
-
-**Example:**
-- gas = 68,901,612
-- lambda_eff = 128 → gas_per_baseline_bit = 538,293.84 (budgeting ratio only)
-
-### 2) `security_equiv_bits` — secure-bit denominator
-
-`security_equiv_bits` is used for "gas per secure bit" style comparisons:
-
-```
-gas_per_secure_bit = gas / security_equiv_bits
-```
-
-This is the denominator that corresponds to a declared security target (e.g., NIST category mapping to 128/192/256).
-It is used when the goal is **cross-scheme security-level comparison**, not budgeting.
-
-**Example:**
-- gas = 68,901,612
-- security_equiv_bits = 192 → gas_per_secure_bit = 358,862.56
-
-**Key distinction:** When comparing schemes at different security levels, always use `security_equiv_bits`. When tracking engineering progress on a single scheme, `lambda_eff` provides a stable baseline.
-
----
-
 ## Public Review Entry Points
 
 If you have 10 minutes:
@@ -228,16 +136,6 @@ If you have 10 minutes:
 ---
 
 ## Why This Exists
-
-This repository is an experimental benchmarking lab spun out of  
-[`ml-dsa-65-ethereum-verification`](https://github.com/pipavlo82/ml-dsa-65-ethereum-verification),
-which provides the **on-chain verification artifacts** (Solidity implementation + gas harnesses) used as a primary vendor source.
-
-It exists to answer one practical question for Ethereum engineers:
-
-> **How expensive is "real security" on EVM — once you normalize gas by a declared security target and by protocol constraints?**
-
-In other words: **"gas/verify" is not enough** if the protocol envelope bounds end-to-end security even when the wallet uses PQ signatures.
 
 This is a **measurement lab and methodology**, not a comprehensive benchmark suite.
 
@@ -253,21 +151,6 @@ This repo focuses on:
 This is designed to compare not only **gas**, but also **what actually bounds security in protocol-aligned paths** (envelopes, attestations, entropy dependencies).
 
 ---
-## The L1 Execution Wall (why L2-native + L1-settlement)
-
-**Working conclusion:** direct post-quantum (PQ) signature verification on Ethereum L1 is a *luxury path* today.
-L1 is best treated as a **settlement / verification layer** for compact verification artifacts (e.g., SNARK proofs),
-while the heavy PQ verification work is pushed to **L2 / appchains** (or to future protocol-facing precompiles).
-
-This repo therefore measures two complementary cost envelopes:
-
-- **L2 / Appchain (Native PQ):** measures *algorithmic compute cost* of PQ verification primitives and optimized paths
-  (e.g., **ML-DSA-65 PreA compute_w ≈ 1.5M gas** as a compute ceiling reference point).
-- **L1 Mainnet (ZK-Proxy / Settlement):** measures the *settlement cost* of verifying a proof that “contains PQ inside”
-  (e.g., **Groth16 on BN254 pairing precompile** + calldata/public inputs), where security lives inside the circuit.
-
-The practical engineering question is not “gas per verify” in isolation, but:
-**what is the cheapest protocol-aligned path to *real security* under explicit semantics (lanes) and explicit surfaces?**
 
 ## New: Weakest-link + Protocol Readiness Surfaces
 
@@ -289,48 +172,20 @@ Reports:
 
 ---
 
-## Dataset (JSONL is source of truth)
-
-- **Canonical results:** `data/results.jsonl` (one JSON object per line)
-- **Derived CSV:** `data/results.csv` (regenerated from JSONL for compatibility with reports)
-
-### Specs
-- `spec/dataset.md` — overview + conventions
-- `spec/dataset_schema.md` — canonical schema + legacy-compat contract (CSV/reports)
-- `spec/explicit_lanes.md` — explicit message lanes (wormhole prevention) via `lane_assumption` / `wiring_lane`
-
-### Rebuild CSV + reports from JSONL
-
-```bash
-bash scripts/make_reports.sh
-```
-
-### Adding a new benchmark row (rule of the repo)
-
-Append via `scripts/parse_bench.py` (enforces canonical keys and backfills legacy keys for CSV/reports):
-
-```bash
-python3 scripts/parse_bench.py path/to/new_result.json
-bash scripts/make_reports.sh
-```
-
-**Required minimum fields** in the input JSON:
-- `scheme`, `bench_name`, `chain_profile`
-- `gas` (or legacy `gas_verify`)
-- `denominator` + `denom_bits` (or legacy `security_metric_type` + `security_metric_value`)
-- **lane metadata:** `lane_assumption` + `wiring_lane` when applicable
-
----
-
 ## Reproducible Reports & Data Policy
 
 This repository follows a **single canonical source of truth** model for benchmark data and reports.
 
-### Gas extraction modes (snapshot vs logs)
+## Canonical test vectors + calldata packs
 
-Some vendor harnesses expose gas via Foundry snapshot lines `(gas: N)`, while others print it via logs
-(e.g., `Gas used: N`). Runners support both via `scripts/extract_foundry_gas.py` using a per-run `needle`
-(e.g., `Gas used:`) so vendor repos do not need to be modified.
+To keep benchmarks comparable across implementations, this repo treats test vectors and calldata conventions as **external, pinned artifacts**.
+
+Canonical packs live in **pqevm-vector-packs** (vectors + calldata shapes):
+- repo: https://github.com/pipavlo82/pqevm-vector-packs
+- purpose: single source of truth for (scheme, variant, packing, calldata) so different projects do not benchmark different conventions
+
+This repo may reference packs via dataset metadata fields (e.g. `vector_pack_ref`, `vector_pack_id`, `vector_id`) when available.
+
 
 ### Canonical Data
 
@@ -409,7 +264,6 @@ vector suite** that covers both common EVM-relevant approaches:
 - Verifier: `scripts/verify_vectors.py`
 
 ### Run locally
-
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
@@ -418,21 +272,8 @@ python scripts/verify_vectors.py data/vectors/xof_vectors.json
 ```
 
 ### CI
-
 A dedicated workflow validates vectors on every PR:
 - `.github/workflows/vectors.yml`
-
----
-
-## Canonical test vectors + calldata packs
-
-To keep benchmarks comparable across implementations, this repo treats test vectors and calldata conventions as **external, pinned artifacts**.
-
-Canonical packs live in **pqevm-vector-packs** (vectors + calldata shapes):
-- repo: https://github.com/pipavlo82/pqevm-vector-packs
-- purpose: single source of truth for (scheme, variant, packing, calldata) so different projects do not benchmark different conventions
-
-This repo may reference packs via dataset metadata fields (e.g. `vector_pack_ref`, `vector_pack_id`, `vector_id`) when available.
 
 ---
 
@@ -461,17 +302,6 @@ See also:
 - `reports/summary.md`
 
 ---
-## ZK Surfaces (Settlement costs)
-
-This repo includes **proof-verification surfaces** that represent *L1 settlement cost* for “PQ inside SNARK” designs.
-
-- `groth16_bn254_pairing4_surface` — BN254 pairing precompile (0x08), 4 pairs.
-  This measures the **on-chain settlement cost** of verifying a Groth16 proof (plus calldata/public inputs),
-  independent of what the circuit proves (PQ signature verification, aggregation, etc.).
-
-Interpretation:
-- If PQ verification happens inside a circuit, L1 cost is dominated by **proof verification + calldata**.
-- The circuit must still bind **Explicit Message Lanes** into its public inputs to prevent semantic replay (“wormholes”).
 
 ## Chart
 
@@ -488,7 +318,7 @@ Interpretation:
 **Source of truth:** `data/results.jsonl` (CSV is deterministically rebuilt by `scripts/parse_bench.py --regen` via `./scripts/make_reports.sh`).
 
 > **Normalization note:** For ML-DSA-65 we report `security_equiv_bits=192` (FIPS-204 Category 3 convention) in tables.
-> Some raw vendor ingests may also record `lambda_eff=128` as a **budgeting denominator** (engineering baseline); those are clearly labeled and represent "gas per baseline bit" for budgeting purposes, NOT "gas per secure bit" or security claims.
+> Some raw vendor ingests may also record `lambda_eff=128` as a budgeting denominator; those are clearly labeled as baseline and are not used for "secure-bit" comparisons.
 
 ### Signature & AA Benchmarks
 
@@ -568,16 +398,49 @@ Vendored repos may be stored under `vendors/`; provenance is always recorded per
 
 ---
 
-## Dataset Schema
+## Dataset Schema (CSV)
 
-- **Canonical schema:** `spec/dataset_schema.md` (canonical keys + legacy compatibility contract for CSV/reports)
-- **Dataset overview:** `spec/dataset.md`
-- **Source of truth:** `data/results.jsonl`
-- **Derived:** `data/results.csv` + `reports/*` (regenerated by `bash scripts/make_reports.sh`)
+**Tabular format:** `data/results.csv` (derived from canonical `data/results.jsonl`)
+
+Columns:
+- `ts_utc` — timestamp UTC
+- `repo`, `commit` — provenance of the implementation
+- `scheme` — e.g., `mldsa65`, `ecdsa`, `falcon1024`, `randao`, `attestation`
+- `bench_name` — benchmark identifier
+- `chain_profile` — e.g., `EVM/L1` (extendable to L2 profiles)
+- `gas_verify` — gas used for the bench
+- `security_metric_type` — e.g., `security_equiv_bits` (signatures) or `H_min` (randomness/VRF/protocol)
+- `security_metric_value` — metric value in bits (e.g., 128 / 192 / 256)
+- `gas_per_secure_bit` — computed as `gas_verify / security_metric_value`
+- `hash_profile` — e.g., `keccak256` or `unknown`
+- `notes` — context + refs (runner, branch, extraction method)
+- `lane_assumption (optional): explicit | implicit_or_legacy
+- `wiring_lane` (optional): canonical lane id (e.g., `EVM_SIG_LANE_V0`)
+**Lane rule (signatures):** comparable signature benches SHOULD set `lane_assumption=explicit` and a concrete `wiring_lane`
+(e.g., `EVM_SIG_LANE_V0`). Records with different `wiring_lane` MUST NOT be compared as “the same surface” (avoid
+domain-separation wormholes). See `spec/explicit_lanes.md`.
+
+Additional (optional) fields used for composed pipelines:
+- `security_model` — e.g. `raw` or `weakest_link`
+- `depends_on` — list of dependency record keys (`scheme::bench_name`) used to compute effective security
+
+Right now (signature dataset) we primarily use:
+- `security_metric_type = security_equiv_bits`
+- `security_metric_value ∈ {128.0, 192.0, 256.0}`
+
+For protocol surfaces:
+- `security_metric_type = H_min`
+- `security_metric_value` = declared min-entropy placeholder
+
+### Provenance (important)
+
+- In `data/results.jsonl`, `provenance` is a nested JSON object, e.g.:
+  `{"repo":"ZKNoxHQ/ETHDILITHIUM","commit":"...","path":"vendor/ETHDILITHIUM"}`.
+- In `data/results.csv`, `provenance` is stored as a **JSON string** (CSV-escaped quotes).
+  This is intentional: it stays parseable by standard CSV tooling + `json.loads()`.
 
 ---
-
-## Key storage assumption (annotation axis)
+### Key storage assumption (annotation axis)
 
 Benchmarks measure **on-chain verification cost** (gas), which is independent of how private keys are stored off-chain.  
 However, different key-handling models materially change the real-world threat model (exfiltration risk, operational constraints).
@@ -590,8 +453,6 @@ This repo treats key storage as an **optional annotation axis** via `key_storage
 
 Spec: [`spec/key_storage_assumption.md`](spec/key_storage_assumption.md)  
 Default: records missing this field are assumed `software_exportable`.
-
----
 
 ## Security Normalization (Explicit Assumptions)
 
@@ -609,26 +470,21 @@ This repo separates:
 
 **Important:** These are normalization conventions, not security proofs or equivalence claims. The rule is that they are explicit and applied consistently.
 
-**Dilithium normalization** is parameter-set dependent (e.g., Dilithium2/3/5). Until the vendor variant is pinned to a declared set, ETHDILITHIUM rows are recorded with `lambda_eff=128` for budgeting comparability.
+**Dilithium normalization** is parameter-set dependent (e.g., Dilithium2/3/5). Until the vendor variant is pinned to a
+declared set, ETHDILITHIUM rows are recorded with `lambda_eff=128` for budgeting comparability.
 
-### Optional Baseline Normalization (Budgeting-Only)
+When `security_metric_type=lambda_eff`, the resulting `gas_per_secure_bit` column should be interpreted as a budgeting
+ratio (gas per assumed baseline), not a claim of equivalent classical security.
 
-Some rows report an additional derived value using `lambda_eff` (e.g., 128) as a **budgeting baseline**:
+### Optional Baseline Normalization (Separate Metric)
+
+If you want "per 128-bit baseline" as a convenience view:
 
 ```
-gas_per_baseline_bit = gas / lambda_eff
+gas_per_128b = gas_verify / 128
 ```
 
-This normalization is provided **only** to make budgeting-style comparisons easier and to keep results stable across iterations.
-
-**It is NOT:**
-- "Security equivalence"
-- "Classical security"  
-- A statement that the scheme provides `lambda_eff` bits of security
-
-**When to use each:**
-- For **security-level comparisons** across schemes → use `security_equiv_bits` and `gas_per_secure_bit`
-- For **budgeting / engineering progress tracking** → use `lambda_eff` and `gas_per_baseline_bit`
+Label it explicitly as baseline (not "secure-bit").
 
 ---
 
@@ -792,9 +648,6 @@ Local microbench copy:
 - `attestation::relay_attestation_surface` — Foundry gas harness (measured)
 - `das::verify_sample_512b_surface` — Foundry gas harness (measured)
 
-### ZK proof verification surfaces (BN254)
-- `groth16_bn254_pairing4_surface` — BN254 pairing precompile (0x08), 4 pairs. Measures a protocol-facing proof-verifier surface (not native PQ signature verify).
-
 ---
 
 ## Related Work / References
@@ -869,3 +722,33 @@ https://github.com/pipavlo82/gas-per-secure-bit
 ```
 
 For reproducibility, cite a tag or commit hash.
+
+---
+
+## PQ aggregation surfaces (BLS → PQ) — why this matters
+
+Ethereum's BLS aggregation provides scalability via algebraic structure, but practical verification still includes
+linear work to reconstruct aggregate public keys from participation bitfields. Post-quantum signature families lose
+this algebraic aggregation property, pushing the system toward **proof-based aggregation** (recursive SNARKs or
+folding / accumulation schemes).
+
+As a result, "gas per verify" alone is insufficient: engineering decisions require **surface-aware, security-normalized**
+benchmarks across L1/L2/AA verification surfaces and, eventually, PQ aggregation proof verification surfaces.
+
+See: [spec/pq_signature_aggregation_context.md](spec/pq_signature_aggregation_context.md)
+
+## Dataset format (JSONL is source of truth)
+
+- Canonical results live in `data/results.jsonl` (one JSON object per line).
+- `data/results.csv` is regenerated from JSONL for convenience/backward compatibility.
+
+Schema and rules:
+- `spec/dataset.md` — overview and usage
+- `spec/dataset_schema.md` — canonical schema + legacy compatibility contract
+- `spec/explicit_lanes.md` — explicit message lanes (wormhole prevention) used via `lane_assumption` / `wiring_lane`
+
+Rebuild CSV + reports from JSONL:
+```bash
+bash scripts/make_reports.sh
+
+```
