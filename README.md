@@ -17,6 +17,7 @@
 
 - [Methodology (surfaces + weakest-link)](#methodology-surfaces--weakest-link)
 - [Explicit Message Lanes (wormholes)](#explicit-message-lanes-wormholes)
+- [The L1 Execution Wall](#the-l1-execution-wall)
 - [PQ aggregation surfaces (BLS → PQ) — why this matters](#pq-aggregation-surfaces-bls--pq--why-this-matters)
 - [Core Metric](#core-metric)
 - [Public Review Entry Points](#public-review-entry-points)
@@ -58,6 +59,18 @@ Spec: [`spec/explicit_lanes.md`](spec/explicit_lanes.md)
 **Dataset rule:** if a benchmark does not implement an explicit lane envelope, it MUST declare `lane_assumption` accordingly (e.g., `implicit_or_unknown`) and MUST NOT be compared across surfaces as if it were lane-safe.
 
 ---
+## The L1 Execution Wall
+
+This repo separates **execution** from **settlement** benchmarks:
+
+- **Execution (L2 / appchain / rollup runtime):** native verification cost (Solidity / precompile style). This is where algorithmic work (e.g., PreA) matters.
+- **Settlement (EVM/L1):** proxy verification cost (e.g., Groth16/BN254 proof verification + calldata) that attests “a PQ verify happened off-chain / in-circuit”. This measures the **L1 envelope**, not the signature algorithm itself.
+
+**Interpretation rule:** do not compare `surface_layer=execution` vs `surface_layer=settlement` records as if they were the same benchmark. They answer different questions (native compute vs L1 settlement envelope).
+
+Recommended reading:
+- `reports/protocol_readiness.md` — envelope dominance / weakest-link interpretation
+- ZK surface: `groth16_bn254_pairing4_surface` (settlement cost baseline)
 
 
 To avoid mixing benchmark scopes, the dataset supports a surface taxonomy and an optional dependency graph:
