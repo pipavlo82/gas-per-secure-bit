@@ -264,6 +264,10 @@ def normalize_row(raw: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, An
     if isinstance(surface_id, str) and surface_id:
         out["surface_id"] = surface_id
 
+    method = raw.get("method")
+    if isinstance(method, str) and method:
+        out["method"] = method
+
     lane_assumption = raw.get("lane_assumption")
     if isinstance(lane_assumption, str) and lane_assumption:
         out["lane_assumption"] = lane_assumption
@@ -386,6 +390,8 @@ def regen_csv_from_jsonl(jsonl_path: Path, csv_path: Path) -> Tuple[int, int]:
         "security_metric_type",
         "security_metric_value",
         "gas_per_secure_bit",
+        "surface_id",
+        "method",
         "hash_profile",
         "security_model",
         "surface_class",

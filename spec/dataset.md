@@ -9,6 +9,7 @@ This repo’s canonical dataset is `data/results.jsonl` (append-only, one JSON o
 - `scheme` (string) — e.g. `mldsa65_fips204`, `zk_groth16_bn254`
 - `bench_name` (string) — stable identifier for this benchmark
 - `surface_id` (string) — taxonomy node (e.g. `sig::erc7913`, `aa::validateUserOp`, `sig::zk_from_pq::...`)
+- `method` (string) — verification method (e.g. `native`, `preA`, `zk_proxy_groth16_bn254`)
 - `chain_profile` (string) — e.g. `evm_l1`, `evm_l2`
 - `gas` (int) — single-run snapshot gas
 
