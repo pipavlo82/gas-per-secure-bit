@@ -22,6 +22,7 @@ Required:
 
 Recommended (used to avoid scope-mixing and “wormholes”):
 - `surface_id` (string) — canonical surface taxonomy id, e.g. `zk::groth16_bn254::pairing4`
+- `method` (string) — verification method, e.g. `native` | `preA` | `zk_proxy_groth16_bn254`
 - `lane_assumption` (string) — `explicit` | `implicit` | `unknown`
 - `wiring_lane` (string) — lane id (see `spec/explicit_lanes.md`)
 

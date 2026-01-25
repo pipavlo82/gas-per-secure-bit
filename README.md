@@ -69,6 +69,7 @@ Spec: [`spec/explicit_lanes.md`](spec/explicit_lanes.md)
 
 
 
+
 ### ZK requirement: lanes MUST be public inputs
 
 If a verification scheme is wrapped into a SNARK/STARK, the **lane envelope** MUST be bound as **public inputs**
@@ -85,6 +86,7 @@ Otherwise, the proof system can become a semantic replay vector (“wormhole”)
 
 Public review thread (Ethereum Magicians):
 - `https://ethereum-magicians.org/t/explicit-message-lanes-for-pq-hybrid-signatures-avoiding-domain-separation-wormholes/2745
+
 **Dataset rule:** if a benchmark does not implement an explicit lane envelope, it MUST declare `lane_assumption` accordingly (e.g., `implicit_or_unknown`) and MUST NOT be compared across surfaces as if it were lane-safe.
 
 ---
