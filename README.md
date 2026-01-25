@@ -292,6 +292,15 @@ A dedicated workflow validates vectors on every PR:
 
 ## Measured Protocol Surfaces (EVM/L1)
 
+## ZK Surfaces (Settlement)
+
+This repo also includes a **settlement-cost baseline** for “PQ-in-SNARK” designs: `groth16_bn254_pairing4_surface`.
+It measures the on-chain cost to verify a Groth16 proof (BN254 pairing checks + calldata), i.e. the L1 envelope you pay
+when PQ signature verification is executed off-chain / in-circuit and only the proof is settled on L1.
+
+Interpretation: this surface is **algorithm-agnostic** (it does not measure ML-DSA/Falcon arithmetic), and should be compared
+against other `surface_layer=settlement` records, not against native `surface_layer=execution` verification benches.
+
 Some protocol-level "surfaces" are now measured for gas on EVM/L1.  
 For these entries, **gas is measured**, while the **security denominator** (e.g., `H_min`) may still be a **placeholder** until the threat model is finalized.
 
