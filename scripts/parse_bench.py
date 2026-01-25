@@ -375,12 +375,16 @@ def _normalize_provenance_for_csv(prov: Any) -> str:
 
 def regen_csv_from_jsonl(jsonl_path: Path, csv_path: Path) -> Tuple[int, int]:
     rows: List[Dict[str, Any]] = []
+    
     with jsonl_path.open("r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
+        for i, line in enumerate(f, 1):
+            s = line.strip()
+            if not s:
                 continue
-            rows.append(json.loads(line))
+            try:
+                rows.append(json.loads(s))
+            except Exception as e:
+                raise SystemExit(f"BAD JSON in {jsonl_path} on line {i}: {e}") from e
 
     # CSV schema (legacy-compatible; reports depend on these columns)
     fields = [
