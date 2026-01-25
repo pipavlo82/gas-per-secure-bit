@@ -17,9 +17,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+        fetch-depth: 0
+
+      - name: Debug parse_bench head
+        run: |
+        python -V
+        sed -n '360,420p' scripts/parse_bench.py
+        rg -n "enumerate\\(f, 1\\)|json\\.loads\\(line\\)" scripts/parse_bench.py || true
 
       - name: Setup Python
         uses: actions/setup-python@v5
