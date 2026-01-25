@@ -12,6 +12,11 @@ This repo’s canonical dataset is `data/results.jsonl` (append-only, one JSON o
 - `method` (string) — verification method (e.g. `native`, `preA`, `zk_proxy_groth16_bn254`)
 - `chain_profile` (string) — e.g. `evm_l1`, `evm_l2`
 - `gas` (int) — single-run snapshot gas
+  
+**Pivot note (L1 vs L2):**
+- Use `surface_id` to state *where* verification happens (app/protocol/settlement/protocol-entropy).
+- Use `method` to state *how* verification happens (native/preA/zk-proxy).
+These fields are intentionally minimal to avoid taxonomy explosion while making the L1(ZK-settlement) vs L2(native) split explicit.
 
 ### Denominator (normalization)
 

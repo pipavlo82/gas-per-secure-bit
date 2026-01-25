@@ -67,6 +67,26 @@ To prevent cross-surface replay-by-interpretation, this repo defines a minimal *
 
 Spec: [`spec/explicit_lanes.md`](spec/explicit_lanes.md)
 
+
+
+
+### ZK requirement: lanes MUST be public inputs
+
+If a verification scheme is wrapped into a SNARK/STARK, the **lane envelope** MUST be bound as **public inputs**
+(or otherwise unforgeably committed and externally verified), at minimum:
+
+- `lane_version` (domain tag)
+- `chainId`
+- `verifierBinding` (e.g., EntryPoint / precompile identity / verifier contract address)
+- `surface_id`
+- `algo_id` (including hash/XOF lane)
+- `payload_digest`
+
+Otherwise, the proof system can become a semantic replay vector (“wormhole”) across surfaces.
+
+Public review thread (Ethereum Magicians):
+- `https://ethereum-magicians.org/t/explicit-message-lanes-for-pq-hybrid-signatures-avoiding-domain-separation-wormholes/2745
+
 **Dataset rule:** if a benchmark does not implement an explicit lane envelope, it MUST declare `lane_assumption` accordingly (e.g., `implicit_or_unknown`) and MUST NOT be compared across surfaces as if it were lane-safe.
 
 ---
@@ -233,6 +253,21 @@ This repo focuses on:
 This is designed to compare not only **gas**, but also **what actually bounds security in protocol-aligned paths** (envelopes, attestations, entropy dependencies).
 
 ---
+## The L1 Execution Wall (why L2-native + L1-settlement)
+
+**Working conclusion:** direct post-quantum (PQ) signature verification on Ethereum L1 is a *luxury path* today.
+L1 is best treated as a **settlement / verification layer** for compact verification artifacts (e.g., SNARK proofs),
+while the heavy PQ verification work is pushed to **L2 / appchains** (or to future protocol-facing precompiles).
+
+This repo therefore measures two complementary cost envelopes:
+
+- **L2 / Appchain (Native PQ):** measures *algorithmic compute cost* of PQ verification primitives and optimized paths
+  (e.g., **ML-DSA-65 PreA compute_w ≈ 1.5M gas** as a compute ceiling reference point).
+- **L1 Mainnet (ZK-Proxy / Settlement):** measures the *settlement cost* of verifying a proof that “contains PQ inside”
+  (e.g., **Groth16 on BN254 pairing precompile** + calldata/public inputs), where security lives inside the circuit.
+
+The practical engineering question is not “gas per verify” in isolation, but:
+**what is the cheapest protocol-aligned path to *real security* under explicit semantics (lanes) and explicit surfaces?**
 
 ## New: Weakest-link + Protocol Readiness Surfaces
 
@@ -426,6 +461,17 @@ See also:
 - `reports/summary.md`
 
 ---
+## ZK Surfaces (Settlement costs)
+
+This repo includes **proof-verification surfaces** that represent *L1 settlement cost* for “PQ inside SNARK” designs.
+
+- `groth16_bn254_pairing4_surface` — BN254 pairing precompile (0x08), 4 pairs.
+  This measures the **on-chain settlement cost** of verifying a Groth16 proof (plus calldata/public inputs),
+  independent of what the circuit proves (PQ signature verification, aggregation, etc.).
+
+Interpretation:
+- If PQ verification happens inside a circuit, L1 cost is dominated by **proof verification + calldata**.
+- The circuit must still bind **Explicit Message Lanes** into its public inputs to prevent semantic replay (“wormholes”).
 
 ## Chart
 
