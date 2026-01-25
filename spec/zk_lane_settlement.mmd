@@ -1,14 +1,13 @@
 flowchart LR
-    U[User / Wallet] -->|PQ signature| A[ERC-1271 / AA Validator]
+  U[User / Wallet] -->|PQ signature| A[ERC-1271 / AA Validator]
+  A -->|signature + envelope| ZK[ZK Circuit]
 
-    A -->|signature + envelope| ZK[ZK Circuit]
+  subgraph ZKP["ZK proof"]
+    LD["lane_digest = H(envelope)"]:::pub
+    SIG["PQ verify constraints"]
+  end
 
-    subgraph ZK["ZK proof"]
-        LD[lane_digest = H(envelope)]:::pub
-        SIG[PQ verify constraints]
-    end
+  ZK -->|proof + public inputs| V[L1 Verifier]
+  V -->|Groth16 / BN254 pairing| L1[L1 Settlement]
 
-    ZK -->|proof + public inputs| V[L1 Verifier]
-    V -->|Groth16 / BN254 pairing| L1[L1 Settlement]
-
-    classDef pub fill:#ffe9a8,stroke:#333,stroke-width:1px;
+  classDef pub fill:#ffe9a8,stroke:#333,stroke-width:1px;
