@@ -108,3 +108,12 @@ If a benchmark does not use explicit lanes, it MUST say so (see dataset fields).
 
 This keeps results reproducible and prevents comparing different semantics as if they were the same.
 
+## ZK settlement binding (informative)
+
+When PQ or hybrid signatures are verified inside a ZK circuit, the
+`lane_digest` SHOULD be exposed as a **public input** to the circuit.
+
+This ensures that L1 verification binds the proof to a specific execution
+surface and prevents cross-surface replay (“wormholes”).
+
+See settlement diagram: [`spec/zk_lane_settlement.mmd`](zk_lane_settlement.mmd)

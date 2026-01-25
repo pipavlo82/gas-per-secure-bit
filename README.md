@@ -54,6 +54,7 @@
 To prevent cross-surface replay-by-interpretation, this repo defines a minimal **lane envelope** (v0) that MUST be bound into digests: `lane_version`, `chainId`, `verifierBinding`, `surface_id`, `algo_id` (incl. hash/XOF lane), and `payload`.
 
 Spec: [`spec/explicit_lanes.md`](spec/explicit_lanes.md)
+See also: ZK settlement binding diagram — [`spec/zk_lane_settlement.mmd`](spec/zk_lane_settlement.mmd)
 
 **Dataset rule:** if a benchmark does not implement an explicit lane envelope, it MUST declare `lane_assumption` accordingly (e.g., `implicit_or_unknown`) and MUST NOT be compared across surfaces as if it were lane-safe.
 
