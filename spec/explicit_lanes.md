@@ -47,6 +47,15 @@ Example canonical form:
 `hybrid(ecdsa_secp256k1,mldsa65_fips204_shake256_v0)`
 
 ---
+## ZK proxy surfaces: public-input lane binding (v0)
+
+If a signature verification is proven via a SNARK (settlement proxy), the lane envelope MUST still be enforced.
+Concretely, the verifier MUST bind lane fields as **public inputs** (or equivalently bind them into a public digest):
+`lane_version`, `chainId`, `verifierBinding`, `surface_id`, `algo_id` (incl. hash/XOF lane).
+
+Rule: a proof that omits these bindings is lane-ambiguous and can enable replay-by-interpretation (wormholes)
+across surfaces (e.g., ERC-1271 vs AA vs ERC-7913) even if the underlying PQ verification is sound.
+
 ## Canonical wiring lanes (v0)
 
 These lane IDs are used in `data/results.jsonl` via `wiring_lane` to prevent
