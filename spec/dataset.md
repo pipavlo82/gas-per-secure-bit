@@ -11,6 +11,11 @@ This repo’s canonical dataset is `data/results.jsonl` (append-only, one JSON o
 - `surface_id` (string) — taxonomy node (e.g. `sig::erc7913`, `aa::validateUserOp`, `sig::zk_from_pq::...`)
 - `chain_profile` (string) — e.g. `evm_l1`, `evm_l2`
 - `gas` (int) — single-run snapshot gas
+  
+**Pivot note (L1 vs L2):**
+- Use `surface_id` to state *where* verification happens (app/protocol/settlement/protocol-entropy).
+- Use `method` to state *how* verification happens (native/preA/zk-proxy).
+These fields are intentionally minimal to avoid taxonomy explosion while making the L1(ZK-settlement) vs L2(native) split explicit.
 
 ### Denominator (normalization)
 

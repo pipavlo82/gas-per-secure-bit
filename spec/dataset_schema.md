@@ -58,3 +58,19 @@ When a benchmark is intended for cross-project comparison, it SHOULD declare:
 - `wiring_lane = ...` (e.g. `EVM_SIG_LANE_V0`, `EVM_ZK_FROM_PQ_LANE_V0`)
 
 See `spec/explicit_lanes.md` for the lane envelope and canonical lane ids.
+### surface_id (string)
+
+Verification surface classification (minimal v0):
+
+- `sig::app` — app-facing boundary (ERC-1271 / ERC-7913 / AA wrappers)
+- `sig::protocol` — protocol-facing boundary (precompile / enshrined verifier boundary, e.g., candidate EIP-7932 class)
+- `zk::settlement` — L1 settlement verifier boundary (proof verification surfaces, e.g., BN254/Groth16)
+- `entropy::protocol` — protocol entropy surfaces (RANDAO mix, attestation relay, etc.)
+
+### method (string)
+
+Verification method (minimal v0):
+
+- `native` — direct verification of the primitive/algorithm
+- `preA` — optimized path using precomputed/transmitted `A_ntt` (e.g., ML-DSA PreA `compute_w`)
+- `zk_proxy_groth16_bn254` — “PQ inside SNARK”, L1 verifies Groth16 on BN254 (+ calldata/public inputs)
