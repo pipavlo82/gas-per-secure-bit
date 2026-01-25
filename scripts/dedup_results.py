@@ -2,7 +2,8 @@
 import json
 from pathlib import Path
 
-KEY_FIELDS = ("scheme", "bench_name", "repo", "commit")
+
+KEY_FIELDS = ("scheme", "bench_name", "repo", "commit", "chain_profile", "security_metric_type")
 
 def key_of(r: dict):
     return tuple(r.get(k) for k in KEY_FIELDS)
@@ -17,7 +18,8 @@ def main():
             continue
         rows.append(json.loads(line))
 
-    # keep LAST occurrence per (scheme, bench_name, repo, commit)
+    
+# keep LAST occurrence per (scheme, bench_name, repo, commit, chain_profile, security_metric_type)
     seen = {}
     for i, r in enumerate(rows):
         seen[key_of(r)] = i
