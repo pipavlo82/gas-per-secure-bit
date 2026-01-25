@@ -76,3 +76,19 @@ Verification method (minimal v0):
 - `native` — direct verification of the primitive/algorithm
 - `preA` — optimized path using precomputed/transmitted `A_ntt` (e.g., ML-DSA PreA `compute_w`)
 - `zk_proxy_groth16_bn254` — “PQ inside SNARK”, L1 verifies Groth16 on BN254 (+ calldata/public inputs)
+
+  ### surface_layer (optional)
+
+Indicates whether the measured surface represents:
+
+- `execution` — native EVM execution of the cryptographic primitive
+  (e.g. ERC-1271, ERC-7913, AA validation, precompile-style execution).
+
+- `settlement` — protocol-level settlement verification
+  (e.g. ZK proof verification on L1 that *attests* correctness of off-chain or L2 execution).
+
+Notes:
+- Settlement-layer measurements capture the **L1 cost ceiling** for a class of constructions
+  (e.g. PQ-in-SNARK), independent of the underlying signature algorithm.
+- Execution-layer measurements capture the **actual algorithmic cost**.
+
