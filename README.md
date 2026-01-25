@@ -324,6 +324,20 @@ See also:
 - `reports/summary.md`
 
 ---
+### ZK Surfaces (Settlement Layer)
+
+ZK verification surfaces (e.g. Groth16 / BN254 pairing checks on EVM/L1)
+are treated as **settlement-layer baselines**.
+
+They measure the **L1 cost ceiling** of verifying *any* PQ or hybrid signature
+once it is wrapped inside a SNARK, regardless of the underlying algorithm.
+
+In other words:
+- **Execution layer** answers: *How expensive is the algorithm itself?*
+- **Settlement layer** answers: *What is the unavoidable L1 cost of trusting it?*
+
+This distinction is critical when comparing native L2 execution paths
+against L1 settlement via ZK proofs.
 
 ## Chart
 
