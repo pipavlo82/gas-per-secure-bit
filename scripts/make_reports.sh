@@ -29,14 +29,15 @@ if bad:
 print("OK: jsonl parses")
 PY
 
-echo "[3/5] Sanity: uniqueness of (scheme, bench_name, repo, commit, chain_profile)"
+echo "[3/5] Sanity: uniqueness of (scheme, bench_name, repo, commit, chain_profile, security_metric_type)"
 python3 - <<'PY'
 import csv,sys
 rows=list(csv.DictReader(open("data/results.csv","r",encoding="utf-8")))
 seen={}
 dups=[]
 for r in rows:
-    k=(r.get("scheme",""), r.get("bench_name",""), r.get("repo",""), r.get("commit",""), r.get("chain_profile",""))
+    
+    k=(r.get("scheme",""), r.get("bench_name",""), r.get("repo",""), r.get("commit",""), r.get("chain_profile",""), r.get("security_metric_type",""))
     seen[k]=seen.get(k,0)+1
 for k,c in seen.items():
     if c>1:
