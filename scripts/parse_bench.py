@@ -8,7 +8,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Iterator
 
 # Canonical chain_profile normalization (dataset-wide)
 CHAIN_PROFILE_ALIASES = {
@@ -25,6 +25,32 @@ CHAIN_PROFILE_ALIASES = {
     "evm_l2": "EVM/L2",
     "l2": "EVM/L2",
 }
+
+CSV_FIELDS = [
+    "ts_utc",
+    "repo",
+    "commit",
+    "scheme",
+    "bench_name",
+    "chain_profile",
+    "gas_verify",
+    "security_metric_type",
+    "security_metric_value",
+    "gas_per_secure_bit",
+    "surface_id",
+    "method",
+    "surface_layer",
+    "hash_profile",
+    "security_model",
+    "surface_class",
+    "key_storage_assumption",
+    "notes",
+    "depends_on",
+    "provenance",
+    "vector_pack_ref",
+    "vector_pack_id",
+    "vector_id",
+]
 
 
 def normalize_chain_profile(v: Any) -> str:
@@ -55,7 +81,7 @@ def git_head(repo_path: Path) -> str:
         return "unknown"
 
 
-def parse_input(arg: str) -> List[Dict[str, Any]]:
+def parse_input(arg: str) -> Iterator[Dict[str, Any]]:
     """
     Accept either:
       - a JSON string representing one object
@@ -65,32 +91,46 @@ def parse_input(arg: str) -> List[Dict[str, Any]]:
     """
     p = Path(arg)
     if p.exists() and p.is_file():
-        text = p.read_text(encoding="utf-8").strip()
-        if not text:
-            return []
-
-        # First try: parse as normal JSON (object or list)
+        # Try to parse as a standard JSON file (object or list) first
         try:
-            obj = json.loads(text)
-            if isinstance(obj, list):
-                return [x for x in obj if isinstance(x, dict)]
-            if isinstance(obj, dict):
-                return [obj]
+            with p.open("r", encoding="utf-8") as f:
+                # json.load reads from the file stream directly
+                obj = json.load(f)
+                if isinstance(obj, list):
+                    for x in obj:
+                        if isinstance(x, dict):
+                            yield x
+                    return
+                if isinstance(obj, dict):
+                    yield obj
+                    return
         except Exception:
+            # Not a valid single JSON document, fall back to JSONL
             pass
 
         # Fallback: treat as JSONL (one object per line)
-        rows: List[Dict[str, Any]] = []
         with p.open("r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:
                     continue
-                rows.append(json.loads(line))
-        return rows
+                try:
+                    yield json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+        return
 
     # Not a file => treat as single JSON object string
-    return [json.loads(arg)]
+    try:
+        obj = json.loads(arg)
+        if isinstance(obj, list):
+            for x in obj:
+                if isinstance(x, dict):
+                    yield x
+        elif isinstance(obj, dict):
+            yield obj
+    except Exception:
+        pass
 
 
 def get_any(d: Dict[str, Any], keys: List[str], default: Any = None) -> Any:
@@ -373,77 +413,68 @@ def _normalize_provenance_for_csv(prov: Any) -> str:
     return ""
 
 
+def prepare_csv_row(r: Dict[str, Any]) -> Dict[str, Any]:
+    # Ensure legacy keys exist even if JSONL row only had canonical keys
+    _ensure_canonical_and_legacy_keys(r)
+
+    row_out = {k: r.get(k, "") for k in CSV_FIELDS}
+
+    dep = r.get("depends_on")
+    if isinstance(dep, list):
+        row_out["depends_on"] = _csv_json(dep)
+    elif isinstance(dep, str) and dep.strip():
+        row_out["depends_on"] = dep
+    else:
+        row_out["depends_on"] = ""
+
+    row_out["provenance"] = _normalize_provenance_for_csv(r.get("provenance"))
+
+    if "key_storage_assumption" not in r or not str(r.get("key_storage_assumption") or "").strip():
+        row_out["key_storage_assumption"] = "unknown"
+
+    return row_out
+
+
 def regen_csv_from_jsonl(jsonl_path: Path, csv_path: Path) -> Tuple[int, int]:
-    rows: List[Dict[str, Any]] = []
-    
-    with jsonl_path.open("r", encoding="utf-8") as f:
-        for i, line in enumerate(f, 1):
-            s = line.strip()
-            if not s:
-                continue
-            try:
-                rows.append(json.loads(s))
-            except Exception as e:
-                raise SystemExit(f"BAD JSON in {jsonl_path} on line {i}: {e}") from e
-
-    # CSV schema (legacy-compatible; reports depend on these columns)
-    fields = [
-        "ts_utc",
-        "repo",
-        "commit",
-        "scheme",
-        "bench_name",
-        "chain_profile",
-        "gas_verify",
-        "security_metric_type",
-        "security_metric_value",
-        "gas_per_secure_bit",
-        "surface_id",
-        "method",
-        "surface_layer",
-        "hash_profile",
-        "security_model",
-        "surface_class",
-        "key_storage_assumption",
-        "notes",
-        "depends_on",
-        "provenance",
-        "vector_pack_ref",
-        "vector_pack_id",
-        "vector_id",
-    ]
-
-    with csv_path.open("w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=fields)
+    count = 0
+    with csv_path.open("w", newline="", encoding="utf-8") as f_out:
+        w = csv.DictWriter(f_out, fieldnames=CSV_FIELDS)
         w.writeheader()
+
+        with jsonl_path.open("r", encoding="utf-8") as f_in:
+            for i, line in enumerate(f_in, 1):
+                s = line.strip()
+                if not s:
+                    continue
+                try:
+                    r = json.loads(s)
+                    row_out = prepare_csv_row(r)
+                    w.writerow(row_out)
+                    count += 1
+                except Exception as e:
+                    raise SystemExit(f"BAD JSON in {jsonl_path} on line {i}: {e}") from e
+
+    return len(CSV_FIELDS), count
+
+
+def append_to_csv(rows: List[Dict[str, Any]], csv_path: Path) -> None:
+    # Check if header exists
+    needs_header = False
+    if not csv_path.exists() or csv_path.stat().st_size == 0:
+        needs_header = True
+
+    with csv_path.open("a", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=CSV_FIELDS)
+        if needs_header:
+            w.writeheader()
         for r in rows:
-            # Ensure legacy keys exist even if JSONL row only had canonical keys
-            _ensure_canonical_and_legacy_keys(r)
-
-            row_out = {k: r.get(k, "") for k in fields}
-
-            dep = r.get("depends_on")
-            if isinstance(dep, list):
-                row_out["depends_on"] = _csv_json(dep)
-            elif isinstance(dep, str) and dep.strip():
-                row_out["depends_on"] = dep
-            else:
-                row_out["depends_on"] = ""
-
-            row_out["provenance"] = _normalize_provenance_for_csv(r.get("provenance"))
-
-            if "key_storage_assumption" not in r or not str(r.get("key_storage_assumption") or "").strip():
-                row_out["key_storage_assumption"] = "unknown"
-
-            w.writerow(row_out)
-
-    return len(fields), len(rows)
+            w.writerow(prepare_csv_row(r))
 
 
 def main() -> int:
     if len(sys.argv) < 2:
         print("Usage:", file=sys.stderr)
-        print("  parse_bench.py <json_string_or_file_path>     # append to JSONL + rebuild CSV", file=sys.stderr)
+        print("  parse_bench.py <json_string_or_file_path>     # append to JSONL + append to CSV", file=sys.stderr)
         print("  parse_bench.py --regen <jsonl_path>           # rebuild CSV from JSONL only", file=sys.stderr)
         return 1
 
@@ -463,23 +494,28 @@ def main() -> int:
         "ts_utc": utc_ts(),
     }
 
+    normalized: List[Dict[str, Any]] = []
     try:
-        raw_rows = parse_input(sys.argv[1])
-        normalized: List[Dict[str, Any]] = []
-        for r in raw_rows:
+        # parse_input is a generator
+        for r in parse_input(sys.argv[1]):
             normalized.append(normalize_row(r, defaults))
     except Exception as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 2
+
+    if not normalized:
+        print("WARN: No valid rows found in input", file=sys.stderr)
+        return 0
 
     # Append JSONL
     with jsonl_path.open("a", encoding="utf-8") as f:
         for r in normalized:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
-    # Full regen CSV from JSONL (ensures provenance is JSON, not repr)
-    cols, nrows = regen_csv_from_jsonl(jsonl_path, csv_path)
-    print(f"WROTE {csv_path} cols={cols} rows={nrows}")
+    # Append to CSV (optimization: avoid full regen)
+    append_to_csv(normalized, csv_path)
+
+    print(f"APPENDED {len(normalized)} rows to {jsonl_path} and {csv_path}")
     return 0
 
 
