@@ -32,6 +32,11 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Run pipeline integration test
+        shell: bash
+        run: |
+          bash test/test_pipeline.sh
+
       - name: Run report pipeline
         shell: bash
         run: |
