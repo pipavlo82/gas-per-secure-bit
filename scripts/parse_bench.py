@@ -44,6 +44,8 @@ CSV_FIELDS = [
     "security_model",
     "surface_class",
     "key_storage_assumption",
+    "lane_assumption",
+    "wiring_lane",
     "notes",
     "depends_on",
     "provenance",
@@ -313,12 +315,16 @@ def normalize_row(raw: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, An
         out["surface_layer"] = surface_layer
 
     lane_assumption = raw.get("lane_assumption")
-    if isinstance(lane_assumption, str) and lane_assumption:
-        out["lane_assumption"] = lane_assumption
+    if isinstance(lane_assumption, str) and lane_assumption.strip():
+        out["lane_assumption"] = lane_assumption.strip()
+    else:
+        out["lane_assumption"] = "unknown"
 
     wiring_lane = raw.get("wiring_lane")
-    if isinstance(wiring_lane, str) and wiring_lane:
-        out["wiring_lane"] = wiring_lane
+    if isinstance(wiring_lane, str) and wiring_lane.strip():
+        out["wiring_lane"] = wiring_lane.strip()
+    else:
+        out["wiring_lane"] = "unknown"
 
     surface_class = get_any(raw, ["surface_class", "surface"], None)
     if isinstance(surface_class, str) and surface_class:
