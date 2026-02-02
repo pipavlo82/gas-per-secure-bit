@@ -27,14 +27,15 @@ python3 scripts/make_protocol_readiness.py
 | falcon1024 | `falcon1024::qa_handleOps_userop_foundry_weakest_link_sigproto` | 10966076 | 256 | 256 | - | - |  |
 | mldsa65 | `mldsa65::mldsa65_erc1271_packedA_wallet_callctx` | 95392 | 128 | 192 | - | - |  |
 | mldsa65 | `mldsa65::mldsa65_erc7913_verifyWithPackedA_callctx` | 39772 | 128 | 192 | - | - |  |
-| mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho0_log` | 1499354 | 128 | 192 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json | - |  |
-| mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho1_log` | 1499354 | 128 | 192 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json | - |  |
+| mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho0_log` | 1499354 | 128 | 192 | - | - |  |
+| mldsa65 | `mldsa65::preA_compute_w_fromPackedA_ntt_rho1_log` | 1499354 | 128 | 192 | - | - |  |
 | mldsa65 | `mldsa65::verify_poc_foundry` | 68901612 | 128 | 192 | - | - |  |
 | p256 | `p256::ethdilithium_p256verify_log` | 22124 | 128 | 128 | - | - |  |
 | randao | `randao::l1_randao_mix_surface` | 5820 | 32 | 128 | - | - |  |
 | randao | `randao::mix_for_sample_selection_surface` | 13081 | 32 | 128 | - | - |  |
 | sigproto | `sigproto::eip7932_precompile_assumption` | 0 | 256 | 256 | - | - |  |
 | vrf_pq | `vrf_pq::pq_vrf_target_assumption` | 0 | 192 | 192 | - | - |  |
+| zk_groth16_bn254 | `zk_groth16_bn254::groth16_bn254_pairing4_surface` | 355364 | 128 | 128 | - | - |  |
 
 Notes:
 - `effective_security_bits` is conservative: it never exceeds the weakest dependency in `depends_on`.
@@ -49,11 +50,6 @@ These rows are produced by `scripts/run_vendor_mldsa.sh` and currently require p
 
 Note: the dataset currently records ML-DSA-65 rows with `security_metric_type=lambda_eff` and `value=128`. To avoid rewriting later, the table keeps that denominator, and `notes` additionally reports `security_equiv_bits=192` and `gas/bit@192` (= gas_verify/192).
 
-Vector pack (shared reference for these measurements):
-- `vector_pack_ref`: `pipavlo82/pqevm-vector-packs@05988be4f37394b21257d2b5e6c639b4746b698a:packs/mldsa65_fips204`
-- `vector_pack_id`: `5d3e99cb335072a30391f08655398b590634897d953a97d539a6c8e2d20183ed`
-- `vector_id`: `mldsa65_fips204_vector_001`
-
 Reproduce:
 
 ```bash
@@ -64,9 +60,9 @@ bash scripts/make_reports.sh
 
 | bench | gas_verify | denom | value | gas/bit | vendor commit | notes |
 |---|---:|---|---:|---:|---|---|
-| `verify_poc_foundry` | 68,901,612 | `lambda_eff` | 128.0 | 538293.84375 | `d9aabc14cf13` | sec192=192 gpb192=358,862.5625 | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle... |
-| `preA_compute_w_fromPackedA_ntt_rho0_log` | 1,499,354 | `lambda_eff` | 128.0 | 11713.703125 | `d9aabc14cf13` | sec192=192 gpb192=7,809.135417 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json ml-dsa-65-ethereum-verification ... |
-| `preA_compute_w_fromPackedA_ntt_rho1_log` | 1,499,354 | `lambda_eff` | 128.0 | 11713.703125 | `d9aabc14cf13` | sec192=192 gpb192=7,809.135417 | ✅ tx=0xa885b619… ctr=0xe7f1725e… artifact=run-latest.json ml-dsa-65-ethereum-verification ... |
+| `verify_poc_foundry` | 68,901,612 | `lambda_eff` | 128.0 | 538293.84375 | `6d58ce9e64b4` | sec192=192 gpb192=358,862.5625 | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle... |
+| `preA_compute_w_fromPackedA_ntt_rho0_log` | 1,499,354 | `lambda_eff` | 128.0 | 11713.703125 | `6d58ce9e64b4` | sec192=192 gpb192=7,809.135417 | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle... |
+| `preA_compute_w_fromPackedA_ntt_rho1_log` | 1,499,354 | `lambda_eff` | 128.0 | 11713.703125 | `6d58ce9e64b4` | sec192=192 gpb192=7,809.135417 | ml-dsa-65-ethereum-verification (ref=feature/mldsa-ntt-opt-phase12-erc7913-packedA; needle... |
 <!-- MLDSA65_VENDOR_END -->
 
 <!-- FALCON_VENDOR_BEGIN -->

@@ -11,44 +11,10 @@ echo "[1/5] Sanity: required files"
 test -f data/results.jsonl
 test -f scripts/parse_bench.py
 
-echo "[2/5] Sanity: JSONL must be one-JSON-per-line"
-python3 - <<'PY'
-import json,sys
-bad=0
-for i,line in enumerate(open("data/results.jsonl","r",encoding="utf-8"),1):
-    line=line.strip()
-    if not line: 
-        continue
-    try:
-        json.loads(line)
-    except Exception as e:
-        bad+=1
-        print(f"BAD JSONL line {i}: {e}", file=sys.stderr)
-if bad:
-    sys.exit(2)
-print("OK: jsonl parses")
-PY
-
-echo "[3/5] Sanity: uniqueness of (scheme, bench_name, repo, commit, chain_profile)"
-python3 - <<'PY'
-import csv,sys
-rows=list(csv.DictReader(open("data/results.csv","r",encoding="utf-8")))
-seen={}
-dups=[]
-for r in rows:
-    k=(r.get("scheme",""), r.get("bench_name",""), r.get("repo",""), r.get("commit",""), r.get("chain_profile",""))
-    seen[k]=seen.get(k,0)+1
-for k,c in seen.items():
-    if c>1:
-        dups.append((c,k))
-if dups:
-    dups.sort(reverse=True)
-    print("DUPLICATES:", file=sys.stderr)
-    for c,k in dups[:50]:
-        print(c,k, file=sys.stderr)
-    sys.exit(3)
-print("OK: no duplicates")
-PY
+# Step 2 (JSONL sanity) and Step 3 (CSV uniqueness) are redundant:
+# - dedup_results.py already validates JSONL structure and removes duplicates.
+# - parse_bench.py --regen builds CSV 1:1 from valid JSONL.
+# Skipping to save 2 extra parse passes.
 
 echo "[4/5] Generate reports"
 if test -f scripts/report_weakest_link.py; then
@@ -83,4 +49,3 @@ fi
 
 echo "Done."
 ls -la reports || true
-

@@ -2,7 +2,9 @@
 
 <div align="center">
 
-**Benchmarking post-quantum signatures and protocol-level randomness surfaces on EVM by gas cost per cryptographically meaningful bit.**
+**A reproducible measurement lab + methodology for post-quantum signatures on EVM (surfaces, provenance, explicit lanes), with a small v0 dataset.**
+
+**This is a lab, not a final leaderboard.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Built with Foundry](https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg)](https://getfoundry.sh/)
@@ -14,10 +16,13 @@
 ## Table of Contents
 
 - [Methodology (surfaces + weakest-link)](#methodology-surfaces--weakest-link)
+- [Explicit Message Lanes (wormholes)](#explicit-message-lanes-wormholes)
+- [The L1 Execution Wall](#the-l1-execution-wall)
 - [PQ aggregation surfaces (BLS → PQ) — why this matters](#pq-aggregation-surfaces-bls--pq--why-this-matters)
 - [Core Metric](#core-metric)
 - [Public Review Entry Points](#public-review-entry-points)
 - [Why This Exists](#why-this-exists)
+- [Feedback loops under scaling](#feedback-loops-under-scaling)
 - [New: Weakest-link + Protocol Readiness Surfaces](#new-weakest-link--protocol-readiness-surfaces)
 - [Reproducible Reports & Data Policy](#reproducible-reports--data-policy)
 - [Gas extraction modes (snapshot vs logs)](#gas-extraction-modes-snapshot-vs-logs)
@@ -32,6 +37,7 @@
 - [Security Normalization (Explicit Assumptions)](#security-normalization-explicit-assumptions)
 - [Quick Start](#quick-start)
 - [PreA Convention (ML-DSA-65)](#prea-convention-ml-dsa-65)
+- [Key storage assumption (annotation axis)](#key-storage-assumption-annotation-axis)
 - [Vendor benchmarks (pinned refs)](#vendor-benchmarks-pinned-refs)
 - [Benchmarks Included](#benchmarks-included)
 - [Related Work / References](#related-work--references)
@@ -44,6 +50,30 @@
 ---
 
 ## Methodology (surfaces + weakest-link)
+
+## Explicit Message Lanes (wormholes)
+
+To prevent cross-surface replay-by-interpretation, this repo defines a minimal **lane envelope** (v0) that MUST be bound into digests: `lane_version`, `chainId`, `verifierBinding`, `surface_id`, `algo_id` (incl. hash/XOF lane), and `payload`.
+
+Spec: [`spec/explicit_lanes.md`](spec/explicit_lanes.md)
+See also: ZK settlement binding diagram — [`spec/zk_lane_settlement.mmd`](spec/zk_lane_settlement.mmd)
+
+**Dataset rule:** if a benchmark does not implement an explicit lane envelope, it MUST declare `lane_assumption` accordingly (e.g., `implicit_or_unknown`) and MUST NOT be compared across surfaces as if it were lane-safe.
+
+---
+## The L1 Execution Wall
+
+This repo separates **execution** from **settlement** benchmarks:
+
+- **Execution (L2 / appchain / rollup runtime):** native verification cost (Solidity / precompile style). This is where algorithmic work (e.g., PreA) matters.
+- **Settlement (EVM/L1):** proxy verification cost (e.g., Groth16/BN254 proof verification + calldata) that attests “a PQ verify happened off-chain / in-circuit”. This measures the **L1 envelope**, not the signature algorithm itself.
+
+**Interpretation rule:** do not compare `surface_layer=execution` vs `surface_layer=settlement` records as if they were the same benchmark. They answer different questions (native compute vs L1 settlement envelope).
+
+Recommended reading:
+- `reports/protocol_readiness.md` — envelope dominance / weakest-link interpretation
+- ZK surface: `groth16_bn254_pairing4_surface` (settlement cost baseline)
+
 
 To avoid mixing benchmark scopes, the dataset supports a surface taxonomy and an optional dependency graph:
 
@@ -89,14 +119,14 @@ In other words: **"gas/verify" is not enough** if the protocol envelope bounds e
 
 ## Core Metric
 
-GitHub does **not** render LaTeX by default, so the canonical formula is written in plain form:
+To keep rendering consistent across GitHub views, the canonical formula is written in plain form:
 
 > **gas_per_bit = gas_verify / security_metric_value**
 
 Where:
 - **gas_verify** — on-chain gas used to verify a signature / proof (or a verifiable computation step).
 - **security_metric_type** — what the denominator represents:
-  - for **signatures / proofs (today)**: `security_equiv_bits` (a declared *classical-equivalent bits* normalization convention)
+  - for **signatures / proofs (today)**: `security_equiv_bits` (declared normalization bits used by this repo; e.g., Category→bits mapping)
   - for **randomness / VRF / protocol surfaces**: `H_min` (min-entropy of the verified output under an explicit threat model)
 - **security_metric_value** — the denominator value in bits.
 
@@ -117,13 +147,15 @@ If you have 10 minutes:
 3. [spec/gas_per_secure_bit.md](spec/gas_per_secure_bit.md) — definitions, normalization rules, reporting conventions.
 4. [spec/xof_vector_suite.md](spec/xof_vector_suite.md) + [data/vectors/xof_vectors.json](data/vectors/xof_vectors.json) — canonical XOF wiring vectors (FIPS SHAKE + Keccak-CTR).
 5. [data/results.jsonl](data/results.jsonl) — canonical dataset (CSV + reports are deterministically rebuilt from it).
+6. [spec/feedback_loops.md](spec/feedback_loops.md) — framework for scaling failures when protocol resources/semantics are untracked (incl. semantic replay / “wormholes” as a feedback-loop failure mode).
 
 ---
 
 ## Why This Exists
 
-Most public comparisons stop at "gas per verify". That hides critical differences:
+This is a **measurement lab and methodology**, not a comprehensive benchmark suite.
 
+Most public comparisons stop at "gas per verify". That hides critical differences:
 - Different security levels (e.g., ECDSA ~128-bit convention vs ML-DSA-65 ~192 vs Falcon-1024 ~256)
 - Different verification surfaces (EOA vs ERC-1271 vs EIP-4337 pipeline)
 - Different protocol envelopes (e.g., L1 constraints can bound end-to-end security regardless of wallet scheme)
@@ -135,6 +167,13 @@ This repo focuses on:
 This is designed to compare not only **gas**, but also **what actually bounds security in protocol-aligned paths** (envelopes, attestations, entropy dependencies).
 
 ---
+## Feedback loops under scaling
+
+A short conceptual framework for recurring protocol failures caused by missing control variables,
+including semantic replay across verification surfaces.
+
+See: [`spec/feedback_loops.md`](spec/feedback_loops.md)
+
 
 ## New: Weakest-link + Protocol Readiness Surfaces
 
@@ -263,6 +302,15 @@ A dedicated workflow validates vectors on every PR:
 
 ## Measured Protocol Surfaces (EVM/L1)
 
+## ZK Surfaces (Settlement)
+
+This repo also includes a **settlement-cost baseline** for “PQ-in-SNARK” designs: `groth16_bn254_pairing4_surface`.
+It measures the on-chain cost to verify a Groth16 proof (BN254 pairing checks + calldata), i.e. the L1 envelope you pay
+when PQ signature verification is executed off-chain / in-circuit and only the proof is settled on L1.
+
+Interpretation: this surface is **algorithm-agnostic** (it does not measure ML-DSA/Falcon arithmetic), and should be compared
+against other `surface_layer=settlement` records, not against native `surface_layer=execution` verification benches.
+
 Some protocol-level "surfaces" are now measured for gas on EVM/L1.  
 For these entries, **gas is measured**, while the **security denominator** (e.g., `H_min`) may still be a **placeholder** until the threat model is finalized.
 
@@ -286,6 +334,20 @@ See also:
 - `reports/summary.md`
 
 ---
+### ZK Surfaces (Settlement Layer)
+
+ZK verification surfaces (e.g. Groth16 / BN254 pairing checks on EVM/L1)
+are treated as **settlement-layer baselines**.
+
+They measure the **L1 cost ceiling** of verifying *any* PQ or hybrid signature
+once it is wrapped inside a SNARK, regardless of the underlying algorithm.
+
+In other words:
+- **Execution layer** answers: *How expensive is the algorithm itself?*
+- **Settlement layer** answers: *What is the unavoidable L1 cost of trusting it?*
+
+This distinction is critical when comparing native L2 execution paths
+against L1 settlement via ZK proofs.
 
 ## Chart
 
@@ -306,7 +368,7 @@ See also:
 
 ### Signature & AA Benchmarks
 
-| Scheme        | Bench name                                | gas_verify  | security_metric_value (bits) | gas / secure-bit |
+| Scheme          | Bench name                          | gas_verify | security_metric_value (bits) | gas / denom-bit |
 |---------------|-------------------------------------------|------------:|-----------------------------:|-----------------:|
 | **ECDSA**     | ecdsa_verify_ecrecover_foundry            | 21,126      | 128                          | 165.047          |
 | **ECDSA**     | ecdsa_erc1271_isValidSignature_foundry    | 21,413      | 128                          | 167.289          |
@@ -321,7 +383,7 @@ See also:
 
 ### Protocol Surfaces (measured)
 
-| Scheme          | Bench name                          | gas_verify | security_metric_value (bits) | gas / secure-bit |
+| Scheme          | Bench name                          | gas_verify | security_metric_value (bits) | gas / denom-bit |
 |-----------------|-------------------------------------|----------:|-----------------------------:|-----------------:|
 | **RANDAO**      | l1_randao_mix_surface               | 5,820     | 32 (H_min)                   | 181.875          |
 | **RANDAO**      | mix_for_sample_selection_surface    | 13,081    | 32 (H_min)                   | 408.781          |
@@ -341,7 +403,11 @@ See also:
 
 ## What We Built
 
-A reproducible benchmark lab with:
+A reproducible measurement lab with:
+
+- **Methodology:** surfaces, provenance tracking, explicit lanes (v0)
+- **Small v0 dataset:** ML-DSA-65, Falcon-1024, ECDSA baselines, protocol surfaces
+- **Not a leaderboard:** This is infrastructure for reproducible comparison, not final rankings
 
 ### Dataset + Schema
 - Canonical dataset: `data/results.jsonl` (source of truth)
@@ -394,6 +460,11 @@ Columns:
 - `gas_per_secure_bit` — computed as `gas_verify / security_metric_value`
 - `hash_profile` — e.g., `keccak256` or `unknown`
 - `notes` — context + refs (runner, branch, extraction method)
+- `lane_assumption (optional): explicit | implicit_or_legacy
+- `wiring_lane` (optional): canonical lane id (e.g., `EVM_SIG_LANE_V0`)
+**Lane rule (signatures):** comparable signature benches SHOULD set `lane_assumption=explicit` and a concrete `wiring_lane`
+(e.g., `EVM_SIG_LANE_V0`). Records with different `wiring_lane` MUST NOT be compared as “the same surface” (avoid
+domain-separation wormholes). See `spec/explicit_lanes.md`.
 
 Additional (optional) fields used for composed pipelines:
 - `security_model` — e.g. `raw` or `weakest_link`
@@ -415,6 +486,19 @@ For protocol surfaces:
   This is intentional: it stays parseable by standard CSV tooling + `json.loads()`.
 
 ---
+### Key storage assumption (annotation axis)
+
+Benchmarks measure **on-chain verification cost** (gas), which is independent of how private keys are stored off-chain.  
+However, different key-handling models materially change the real-world threat model (exfiltration risk, operational constraints).
+
+This repo treats key storage as an **optional annotation axis** via `key_storage_assumption`:
+
+- `software_exportable` — keys recoverable from software (seed phrases, keyfiles); exportable in plaintext at rest
+- `tpm_sealed_ephemeral_use` — hardware-sealed at rest; ephemeral in-process decrypt for signing + explicit zeroization
+- `tpm_resident_signing` — signing happens entirely within the hardware trust boundary
+
+Spec: [`spec/key_storage_assumption.md`](spec/key_storage_assumption.md)  
+Default: records missing this field are assumed `software_exportable`.
 
 ## Security Normalization (Explicit Assumptions)
 
@@ -427,10 +511,10 @@ This repo separates:
 | Scheme | Security Category | `security_equiv_bits` | Notes |
 |--------|-------------------|----------------------|-------|
 | **ECDSA (secp256k1)** | - | 128 | classical security convention |
-| **ML-DSA-65 (FIPS-204)** | Category 3 | 192 | classical-equivalent convention |
-| **Falcon-1024** | Category 5 | 256 | classical-equivalent convention |
+| **ML-DSA-65 (FIPS-204)** | Category 3 | 192 | declared normalization convention (Category→bits mapping used here) |
+| **Falcon-1024** | Category 5 | 256 | declared normalization convention (Category→bits mapping used here) |
 
-**Important:** These are normalization conventions, not security proofs. The rule is that they are explicit and applied consistently.
+**Important:** These are normalization conventions, not security proofs or equivalence claims. The rule is that they are explicit and applied consistently.
 
 **Dilithium normalization** is parameter-set dependent (e.g., Dilithium2/3/5). Until the vendor variant is pinned to a
 declared set, ETHDILITHIUM rows are recorded with `lambda_eff=128` for budgeting comparability.
@@ -519,8 +603,8 @@ For benchmarks using precomputed `A_ntt` matrices, this repo follows a canonical
 on-chain execution proofs for reproducibility.
 
 ### Documentation
-- **PreA (packedA_ntt) convention:** [vendors/ml-dsa-65-ethereum-verification/docs/preA_packedA_ntt.md](vendors/ml-dsa-65-ethereum-verification/docs/preA_packedA_ntt.md)
-- **On-chain proof runner:** `vendors/ml-dsa-65-ethereum-verification/script/RunPreAOnChain.s.sol`
+- **PreA (packedA_ntt) convention:** Vendor doc (pinned): https://github.com/pipavlo82/ml-dsa-65-ethereum-verification/blob/6d58ce9e64b4c499fc52395e01e2bfbcd967d441/docs/preA_packedA_ntt.md
+- **On-chain proof runner:** Vendor script (pinned): https://github.com/pipavlo82/ml-dsa-65-ethereum-verification/blob/6d58ce9e64b4c499fc52395e01e2bfbcd967d441/script/RunPreAOnChain.s.sol
 
 ### How to reproduce (local anvil)
 
@@ -529,7 +613,7 @@ on-chain execution proofs for reproducibility.
 anvil
 
 # Terminal 2: Run on-chain proof script
-forge script vendors/ml-dsa-65-ethereum-verification/script/RunPreAOnChain.s.sol:RunPreAOnChain \
+forge script https://github.com/pipavlo82/ml-dsa-65-ethereum-verification/blob/6d58ce9e64b4c499fc52395e01e2bfbcd967d441/script/RunPreAOnChain.s.sol:RunPreAOnChain \
   --rpc-url http://127.0.0.1:8545 \
   --private-key $PK \
   --broadcast -vv
@@ -547,7 +631,7 @@ is executed on-chain and produces identical rho0/rho1 measurements, with broadca
 **Note:** the on-chain runner script lives in the ML-DSA vendor repo and is executed via the pinned vendor runner; this repo records the resulting broadcast artifact for reproducibility.
 
 See also:
-- Broadcast artifact: `vendors/ml-dsa-65-ethereum-verification/broadcast/RunPreAOnChain.s.sol/31337/run-latest.json`
+- Broadcast artifact (local only): `vendors/ml-dsa-65-ethereum-verification/broadcast/RunPreAOnChain.s.sol/31337/run-latest.json`
 - Deployed runner contract: `0xe7f1725e7734ce288f8367e1bb143e90bb3f0512` (anvil, chainId=31337)
 
 ---
@@ -670,7 +754,7 @@ This is an experimental benchmarking lab. Results are not a security proof. Use 
 ## Maintainer
 
 Maintained by Pavlo Tvardovskyi (GitHub: @pipavlo82)  
-Contact: shtomko@gmail.com
+Preferred contact: open a GitHub issue or discussion in this repository. (Email available on request for sensitive coordination.)
 
 ---
 
@@ -698,3 +782,19 @@ As a result, "gas per verify" alone is insufficient: engineering decisions requi
 benchmarks across L1/L2/AA verification surfaces and, eventually, PQ aggregation proof verification surfaces.
 
 See: [spec/pq_signature_aggregation_context.md](spec/pq_signature_aggregation_context.md)
+
+## Dataset format (JSONL is source of truth)
+
+- Canonical results live in `data/results.jsonl` (one JSON object per line).
+- `data/results.csv` is regenerated from JSONL for convenience/backward compatibility.
+
+Schema and rules:
+- `spec/dataset.md` — overview and usage
+- `spec/dataset_schema.md` — canonical schema + legacy compatibility contract
+- `spec/explicit_lanes.md` — explicit message lanes (wormhole prevention) used via `lane_assumption` / `wiring_lane`
+
+Rebuild CSV + reports from JSONL:
+```bash
+bash scripts/make_reports.sh
+
+```

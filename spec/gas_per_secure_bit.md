@@ -44,6 +44,10 @@ Each benchmark record MUST include:
 - security_metric_value
 - gas_per_secure_bit
 - notes (hash/xof profile, implementation refs, commit hash, etc.)
+Each benchmark record MAY include:
+
+- lane_assumption (explicit_lane_v0 | implicit_or_legacy)
+- wiring_lane (canonical lane id, e.g. EVM_SIG_LANE_V0 | EVM_ZK_FROM_PQ_LANE_V0)
 ### Optional metadata: key storage realism
 
 Bench records MAY include `key_storage_assumption` to make off-chain key handling explicit. This is metadata (orthogonal to on-chain gas), intended to avoid mixing threat models when comparing results.
@@ -53,3 +57,15 @@ Allowed values (v0):
 - `tpm_sealed_ephemeral_use` — key is sealed/encrypted at rest under a TPM/SE/HSM-derived KEK; plaintext exists only ephemerally in process memory during signing with explicit zeroization.
 - `software_exportable` — key material is software-managed / exportable; no hardware-backed isolation assumption.
 - `unknown` — not specified.
+### Optional metadata: explicit message lanes
+
+Bench records MAY include explicit-lane annotations to prevent replay-by-interpretation
+and to keep benchmarks comparable across verification surfaces.
+
+Fields (v0):
+- `lane_assumption`:
+  - `explicit_lane_v0` — signature/verification binds a versioned lane envelope (see `spec/explicit_lanes.md`)
+  - `implicit_or_legacy` — lane semantics are not explicitly bound; MUST be treated as non-comparable across surfaces
+- `wiring_lane`: canonical lane identifier (e.g., `EVM_SIG_LANE_V0`)
+  - SHOULD be present when `lane_assumption=explicit_lane_v0`
+  - MAY be omitted for legacy/implicit schemes

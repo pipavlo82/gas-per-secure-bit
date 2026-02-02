@@ -17,14 +17,25 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+        fetch-depth: 0
+
+      - name: Debug parse_bench head
+        run: |
+        python -V
+        sed -n '360,420p' scripts/parse_bench.py
+        rg -n "enumerate\\(f, 1\\)|json\\.loads\\(line\\)" scripts/parse_bench.py || true
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: Run pipeline integration test
+        shell: bash
+        run: |
+          bash test/test_pipeline.sh
 
       - name: Run report pipeline
         shell: bash

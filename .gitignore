@@ -38,3 +38,12 @@ vendor/
 
 # local backups
 /data/*.bak*
+
+# local backups
+README.md.bak.*
+
+# local backups
+scripts/parse_bench.py.bak.*
+
+# local backups
+contracts/**.bak.*

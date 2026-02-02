@@ -57,7 +57,8 @@ def keccak_ctr(prefix: bytes, out_len: int, tag: bytes) -> bytes:
     return out[:out_len]
 
 def verify_file(path: Path) -> int:
-    data = json.loads(path.read_text(encoding="utf-8"))
+    with path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
     suite = data.get("suite")
     version = data.get("version")
     vectors = data.get("vectors", [])
