@@ -22,6 +22,7 @@
 - [Core Metric](#core-metric)
 - [Public Review Entry Points](#public-review-entry-points)
 - [Why This Exists](#why-this-exists)
+- [Feedback loops under scaling](#feedback-loops-under-scaling)
 - [New: Weakest-link + Protocol Readiness Surfaces](#new-weakest-link--protocol-readiness-surfaces)
 - [Reproducible Reports & Data Policy](#reproducible-reports--data-policy)
 - [Gas extraction modes (snapshot vs logs)](#gas-extraction-modes-snapshot-vs-logs)
@@ -146,6 +147,7 @@ If you have 10 minutes:
 3. [spec/gas_per_secure_bit.md](spec/gas_per_secure_bit.md) — definitions, normalization rules, reporting conventions.
 4. [spec/xof_vector_suite.md](spec/xof_vector_suite.md) + [data/vectors/xof_vectors.json](data/vectors/xof_vectors.json) — canonical XOF wiring vectors (FIPS SHAKE + Keccak-CTR).
 5. [data/results.jsonl](data/results.jsonl) — canonical dataset (CSV + reports are deterministically rebuilt from it).
+6. [spec/feedback_loops.md](spec/feedback_loops.md) — framework for scaling failures when protocol resources/semantics are untracked (incl. semantic replay / “wormholes” as a feedback-loop failure mode).
 
 ---
 
@@ -165,6 +167,13 @@ This repo focuses on:
 This is designed to compare not only **gas**, but also **what actually bounds security in protocol-aligned paths** (envelopes, attestations, entropy dependencies).
 
 ---
+## Feedback loops under scaling
+
+A short conceptual framework for recurring protocol failures caused by missing control variables,
+including semantic replay across verification surfaces.
+
+See: [`spec/feedback_loops.md`](spec/feedback_loops.md)
+
 
 ## New: Weakest-link + Protocol Readiness Surfaces
 
