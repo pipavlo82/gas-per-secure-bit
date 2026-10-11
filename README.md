@@ -6,7 +6,7 @@
 
 **This is a lab, not a final leaderboard.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Built with Foundry](https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg)](https://getfoundry.sh/)
 
 </div>
@@ -798,3 +798,10 @@ Rebuild CSV + reports from JSONL:
 bash scripts/make_reports.sh
 
 ```
+
+
+## Current licensing scope
+
+Apache-2.0 applies to Pavlo-authored material. See [LICENSE](LICENSE) and
+[LICENSING.md](LICENSING.md). Existing MIT source grants and third-party rights
+remain applicable.
